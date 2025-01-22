@@ -1,0 +1,54 @@
+Resources:
+  # Win10IngressRule1:
+  #   Type: 'AWS::EC2::SecurityGroupIngress'
+  #   Properties:
+  #     GroupId: !ImportValue CalderaSecurityGroupId
+  #     IpProtocol: tcp
+  #     FromPort: 8888
+  #     ToPort: 8888
+  #     SourceSecurityGroupId: !ImportValue Win10SecurityGroupId
+
+  # Win10IngressRule2:
+  #   Type: 'AWS::EC2::SecurityGroupIngress'
+  #   Properties:
+  #     GroupId: !ImportValue CalderaSecurityGroupId
+  #     IpProtocol: tcp
+  #     FromPort: 8888
+  #     ToPort: 8888
+  #     CidrIp: !Join ["", [!ImportValue "Win10InstancePublicIp", "/32"]]
+
+  DVWAIngressRule1:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !ImportValue CalderaSecurityGroupId
+      IpProtocol: tcp
+      FromPort: 8888
+      ToPort: 8888
+      SourceSecurityGroupId: !ImportValue DVWASecurityGroupId
+  
+  DVWAIngressRule2:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !ImportValue CalderaSecurityGroupId
+      IpProtocol: tcp
+      FromPort: 8888
+      ToPort: 8888
+      CidrIp: !Join ["", [!ImportValue "DVWAInstancePublicIp", "/32"]]
+
+  JuiceShopIngressRule1:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !ImportValue CalderaSecurityGroupId
+      IpProtocol: tcp
+      FromPort: 8888
+      ToPort: 8888
+      SourceSecurityGroupId: !ImportValue "JuiceShopSecurityGroupId"
+
+  JuiceShopIngressRule2:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !ImportValue CalderaSecurityGroupId
+      IpProtocol: tcp
+      FromPort: 8888
+      ToPort: 8888
+      CidrIp: !Join ["", [!ImportValue "JuiceInstancePublicIp", "/32"]]
