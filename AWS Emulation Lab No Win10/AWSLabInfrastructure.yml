@@ -16,7 +16,6 @@ Metadata:
         Parameters:
           - MyAWSIP
           - ActiveDirectoryIP
-         # - Windows10IP
           - DamnVulnerableWebApplicationIP
           - JuiceShopApplicationIP
           - CalderaIP
@@ -30,7 +29,6 @@ Metadata:
           - ResourcePrefix
           - TagKey
           - TagValue
-          - EventBridgeScheduler
 
  
 Parameters:
@@ -48,11 +46,6 @@ Parameters:
     Default: "172.31.15.129"
     Description: Please provide a private IP address for the Active Directory system. This IP address should be the only IP in a chosen subnet.
   
-#  Windows10IP:
- #   Type: String
- #   Default: "172.31.33.129"
- #   Description: Please provide a private IP address for the Windows 10 system. This IP address should be in the same subnet as the Caldera Simulation system.
-
   DamnVulnerableWebApplicationIP:
     Type: String
     Default: "172.31.16.129"
@@ -86,13 +79,6 @@ Parameters:
         - true
         - false
     Description: Choose "true" or "false" to enable or disable the Guard Duty Selector.
-
-  EventBridgeScheduler:
-    Type: String
-    AllowedValues:
-        - ENABLED
-        - DISABLED
-    Description: Choose "enabled" or "disabled" to enable or disable the EventBridge Scheduler, which queries Detection and isolates EC2 instances based on found results.
 
   ResourcePrefix:
     Type: String
@@ -217,8 +203,9 @@ Resources:
                   raise
   #Define the Threat Intelligence File for GuardDuty with the Caldera IP Entry
   LockBitIPAddress:
-    DependsOn: apoFileCreationLambda
-    DependsOn: CalderaInstance
+    DependsOn: 
+      - apoFileCreationLambda
+      - CalderaInstance
     Type: AWS::CloudFormation::CustomResource
     Properties:
       ServiceToken: !GetAtt apoFileCreationLambda.Arn
@@ -277,10 +264,10 @@ Resources:
       FindingPublishingFrequency: "FIFTEEN_MINUTES"   
   #SSM Association for Inventory Collection
   SSMInventoryAssociation:
-    DependsOn: CustomInventoryDocument
-    DependsOn: ADInstance
-    #DependsOn: Win10Instance
-    DependsOn: DVWAInstance
+    DependsOn: 
+      - CustomInventoryDocument
+      - ADInstance
+      - DVWAInstance
     Type: 'AWS::SSM::Association'
     Properties:
       Name: 'CustomInventoryDocument' #Specify file needed  for Inventory Collection
@@ -356,9 +343,10 @@ Resources:
 
   #Threat Intelligence File linked to GuardDuty
   LockBitThreatIntel:
-    DependsOn: apos3simulationlabbucket
-    DependsOn: GuardDutyDetector
-    DependsOn: LockBitIPAddress
+    DependsOn: 
+      - apos3simulationlabbucket
+      - GuardDutyDetector
+      - LockBitIPAddress
     Type: AWS::GuardDuty::ThreatIntelSet
     Properties:
       Activate: !Ref ThreatIntelState
@@ -409,10 +397,11 @@ Resources:
   #CloudTrail Definition
   CloudTrailSimulationLab:
     Type: AWS::CloudTrail::Trail
-    DependsOn: apos3simulationlabbucket
-    DependsOn: apos3simulationlabbucketPolicy
-    DependsOn: apoCloudTrailLogsRoleInstanceProfile
-    DependsOn: apoCloudTrailLogsRole
+    DependsOn: 
+      - apos3simulationlabbucket
+      - apos3simulationlabbucketPolicy
+      - apoCloudTrailLogsRoleInstanceProfile
+      - apoCloudTrailLogsRole
     Properties:
       TrailName: CloudTrailSimulationLab 
       CloudWatchLogsLogGroupArn: !GetAtt apoCloudTrailLogsGroup.Arn
@@ -489,6 +478,18 @@ Resources:
         - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
         - arn:aws:iam::aws:policy/CloudWatchAgentAdminPolicy
         - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
+      Policies:
+        - PolicyName: KMSAccessPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - 
+                Effect: Allow
+                Action:
+                  - kms:Decrypt
+                  - kms:Encrypt
+                  - kms:DescribeKey
+                Resource: "arn:aws:kms:eu-central-1:247212739970:key/14828fff-6ba0-4928-83e8-53cb3da81575"
   #DHCP Option Set
   DHCPOptions:
     Type: 'AWS::EC2::DHCPOptions'
@@ -507,15 +508,6 @@ Resources:
     Properties:
       GroupDescription: Enable Caldera to C2 to victims DVWA, JuiceShop, Win10
       SecurityGroupIngress:
-          #SourceSecurityGroupId: !Ref Win10SecurityGroup
-       # - IpProtocol: tcp
-       #   FromPort: 8888
-       #   ToPort: 8888
-          #SourceSecurityGroupId: !Ref DVWASecurityGroup
-       # - IpProtocol: tcp
-       #   FromPort: 8888
-       #   ToPort: 8888
-       #   SourceSecurityGroupId: !Ref Fn::GetAtt: CalderaInstance.PublicIp
         - IpProtocol: tcp
           FromPort: 22
           ToPort: 22
@@ -531,14 +523,6 @@ Resources:
     Properties:
       GroupDescription: Enable RDP & HTTP to my PC and Win10 Workstation
       SecurityGroupIngress:
-        # - IpProtocol: tcp
-        #   FromPort: 3389
-        #   ToPort: 3389
-        #   SourceSecurityGroupId: !Ref Win10SecurityGroup
-        # - IpProtocol: tcp
-        #   FromPort: 80
-        #   ToPort: 80
-        #   SourceSecurityGroupId: !Ref Win10SecurityGroup
         - IpProtocol: tcp
           FromPort: 3389
           ToPort: 3389
@@ -554,14 +538,6 @@ Resources:
     Properties:
       GroupDescription: Enable SSH access via port 22
       SecurityGroupIngress:
-        # - IpProtocol: tcp
-        #   FromPort: 22
-        #   ToPort: 22
-        #   SourceSecurityGroupId: !Ref Win10SecurityGroup
-        # - IpProtocol: tcp
-        #   FromPort: 3000
-        #   ToPort: 3000
-        #   SourceSecurityGroupId: !Ref Win10SecurityGroup
         - IpProtocol: tcp
           FromPort: 22
           ToPort: 22
@@ -571,48 +547,6 @@ Resources:
           ToPort: 3000
           CidrIp: !Ref MyAWSIP
       VpcId: !Ref VPCid
-  #Windows 10 Workstation Security Group
-  # Win10SecurityGroup:
-  #   Type: 'AWS::EC2::SecurityGroup'
-  #   Properties:
-  #     GroupDescription: Enable SSH access via port 22
-  #     VpcId: !Ref VPCid
-
-  # SecurityGroupIngressWin10SSH:
-  #  Type: 'AWS::EC2::SecurityGroupIngress'
-  #  Properties:
-  #     GroupId: !Ref Win10SecurityGroup
-  #     IpProtocol: tcp
-  #     FromPort: 22
-  #     ToPort: 22
-  #     SourceSecurityGroupId: !Ref CalderaSecurityGroup
-
-  # SecurityGroupIngressWin10RDP:
-  #  Type: 'AWS::EC2::SecurityGroupIngress'
-  #  Properties:
-  #     GroupId: !Ref Win10SecurityGroup
-  #     IpProtocol: tcp
-  #     FromPort: 3389
-  #     ToPort: 3389
-  #     SourceSecurityGroupId: !Ref CalderaSecurityGroup
-
-  # SecurityGroupIngressWin10SSHAccess:
-  #  Type: 'AWS::EC2::SecurityGroupIngress'
-  #  Properties:
-  #     GroupId: !Ref Win10SecurityGroup
-  #     IpProtocol: tcp
-  #     FromPort: 22
-  #     ToPort: 22
-  #     CidrIp: !Ref MyAWSIP
-
-  # SecurityGroupIngressWin10RDPAcess:
-  #  Type: 'AWS::EC2::SecurityGroupIngress'
-  #  Properties:
-  #     GroupId: !Ref Win10SecurityGroup
-  #     IpProtocol: tcp
-  #     FromPort: 3389
-  #     ToPort: 3389
-  #     CidrIp: !Ref MyAWSIP
   #Active Directory Security Group
   ADSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
@@ -620,10 +554,6 @@ Resources:
       GroupDescription: Enable the Active Directory Ports and communication to domain joined systems
       SecurityGroupIngress:
         #3 rules for allowing RPC communication TCP
-        # - IpProtocol: tcp
-        #   FromPort: 1024
-        #   ToPort: 65535
-        #   SourceSecurityGroupId: !Ref Win10SecurityGroup
         - IpProtocol: tcp
           FromPort: 1024
           ToPort: 65535
@@ -633,10 +563,6 @@ Resources:
           ToPort: 65535
           SourceSecurityGroupId: !Ref JuiceShopSecurityGroup
         #3 rules for allowing RPC communication UDP
-        # - IpProtocol: udp
-        #   FromPort: 1024
-        #   ToPort: 65535
-        #   SourceSecurityGroupId: !Ref Win10SecurityGroup
         - IpProtocol: udp
           FromPort: 1024
           ToPort: 65535
@@ -646,10 +572,6 @@ Resources:
           ToPort: 65535
           SourceSecurityGroupId: !Ref JuiceShopSecurityGroup
         #3 rules for LDAP
-        # - IpProtocol: tcp
-        #   FromPort: 389
-        #   ToPort: 389
-        #   SourceSecurityGroupId: !Ref Win10SecurityGroup
         - IpProtocol: tcp
           FromPort: 389
           ToPort: 389
@@ -659,10 +581,6 @@ Resources:
           ToPort: 389
           SourceSecurityGroupId: !Ref JuiceShopSecurityGroup
         #3 rules for Kerberos
-        # - IpProtocol: tcp
-        #   FromPort: 88
-        #   ToPort: 88
-        #   SourceSecurityGroupId: !Ref Win10SecurityGroup
         - IpProtocol: tcp
           FromPort: 88
           ToPort: 88
@@ -672,10 +590,6 @@ Resources:
           ToPort: 88
           SourceSecurityGroupId: !Ref JuiceShopSecurityGroup
         #3 rules for DNS TCP
-        # - IpProtocol: tcp
-        #   FromPort: 53
-        #   ToPort: 53
-        #   SourceSecurityGroupId: !Ref Win10SecurityGroup
         - IpProtocol: tcp
           FromPort: 53
           ToPort: 53
@@ -685,10 +599,6 @@ Resources:
           ToPort: 53
           SourceSecurityGroupId: !Ref JuiceShopSecurityGroup
         #3 rules for DNS UDP
-        # - IpProtocol: udp
-        #   FromPort: 53
-        #   ToPort: 53
-        #   SourceSecurityGroupId: !Ref Win10SecurityGroup
         - IpProtocol: udp
           FromPort: 53
           ToPort: 53
@@ -697,20 +607,12 @@ Resources:
           FromPort: 53
           ToPort: 53
           SourceSecurityGroupId: !Ref JuiceShopSecurityGroup
-        #2 rules for RDP from myIP & Win10
-        # - IpProtocol: tcp
-        #   FromPort: 3389
-        #   ToPort: 3389
-        #   SourceSecurityGroupId: !Ref Win10SecurityGroup
+        #3 rules for RDP from myIP & Win10
         - IpProtocol: tcp
           FromPort: 3389
           ToPort: 3389
           CidrIp: !Ref MyAWSIP
         #3 rules for RPC Endpoint Manager
-        # - IpProtocol: tcp
-        #   FromPort: 135
-        #   ToPort: 135
-        #   SourceSecurityGroupId: !Ref Win10SecurityGroup
         - IpProtocol: tcp
           FromPort: 135
           ToPort: 135
@@ -720,10 +622,6 @@ Resources:
           ToPort: 135
           SourceSecurityGroupId: !Ref JuiceShopSecurityGroup
         #3 rules for LDAPS
-        # - IpProtocol: tcp
-        #   FromPort: 636
-        #   ToPort: 636
-        #   SourceSecurityGroupId: !Ref Win10SecurityGroup
         - IpProtocol: tcp
           FromPort: 636
           ToPort: 636
@@ -733,10 +631,6 @@ Resources:
           ToPort: 636
           SourceSecurityGroupId: !Ref JuiceShopSecurityGroup
         #3 rules for KPASSWD TCP
-        # - IpProtocol: tcp
-        #   FromPort: 464
-        #   ToPort: 464
-        #   SourceSecurityGroupId: !Ref Win10SecurityGroup
         - IpProtocol: tcp
           FromPort: 464
           ToPort: 464
@@ -746,10 +640,6 @@ Resources:
           ToPort: 464
           SourceSecurityGroupId: !Ref JuiceShopSecurityGroup
         #3 rules for KPASSWD UDP
-        # - IpProtocol: udp
-        #   FromPort: 464
-        #   ToPort: 464
-        #   SourceSecurityGroupId: !Ref Win10SecurityGroup
         - IpProtocol: udp
           FromPort: 464
           ToPort: 464
@@ -759,10 +649,6 @@ Resources:
           ToPort: 464
           SourceSecurityGroupId: !Ref JuiceShopSecurityGroup
         #3 rules for DC Locator
-        # - IpProtocol: udp
-        #   FromPort: 389
-        #   ToPort: 389
-        #   SourceSecurityGroupId: !Ref Win10SecurityGroup
         - IpProtocol: udp
           FromPort: 389
           ToPort: 389
@@ -772,10 +658,6 @@ Resources:
           ToPort: 389
           SourceSecurityGroupId: !Ref JuiceShopSecurityGroup
         #3 rules for SMB
-        # - IpProtocol: tcp
-        #   FromPort: 445
-        #   ToPort: 445
-        #   SourceSecurityGroupId: !Ref Win10SecurityGroup
         - IpProtocol: tcp
           FromPort: 445
           ToPort: 445
@@ -789,7 +671,7 @@ Resources:
   ADInstance:
     Type: 'AWS::EC2::Instance'
     Properties:
-      ImageId: ami-00d4dafd23574261e
+      ImageId: ami-050790b9eb8faabd0
       InstanceType: t2.small
       SubnetId: !Ref SubnetforAD 
       PrivateIpAddress: !Ref ActiveDirectoryIP
@@ -799,25 +681,11 @@ Resources:
       Tags:
         - Key: Name
           Value: ActiveDirectory
-  #Windows 10 Instance
-  # Win10Instance:
-  #   Type: 'AWS::EC2::Instance'
-  #   Properties:
-  #     ImageId:  ami-0331e71d58b507e45
-  #     InstanceType: t3.xlarge
-  #     SubnetId: !Ref SubnetforPCs
-  #     PrivateIpAddress: !Ref Windows10IP
-  #     SecurityGroupIds:
-  #       - Ref: Win10SecurityGroup
-  #     IamInstanceProfile: !Ref CloudWatchAgentForLogsRoleInstanceProfile
-  #     Tags:
-  #       - Key: Name
-  #         Value: Windows10
   #DVWA Instance
   DVWAInstance:
     Type: 'AWS::EC2::Instance'
     Properties:
-      ImageId: ami-0aff9caea533c0bf4
+      ImageId: ami-070148ff9e3d471e5
       InstanceType: t2.medium
       SubnetId: !Ref SubnetforWebservers
       PrivateIpAddress: !Ref DamnVulnerableWebApplicationIP
@@ -831,7 +699,7 @@ Resources:
   JuiceInstance:
     Type: 'AWS::EC2::Instance'
     Properties:
-      ImageId: ami-0e3410a4cc57c2745
+      ImageId: ami-0a34dda0dd5275f74
       InstanceType: t2.small
       SubnetId: !Ref SubnetforWebservers
       PrivateIpAddress: !Ref JuiceShopApplicationIP
@@ -854,212 +722,9 @@ Resources:
       IamInstanceProfile: !Ref CloudWatchAgentForLogsRoleInstanceProfile
       Tags:
         - Key: Name
-          Value: Caldera
-
-#II EC2 CloudWatch Log Insights Query & reaction: tagging EC2 instance if results are returned. This tagging invokes a EventBridge Rule, which then invokes a lambda function to isolate the EC2 instance
-
-  #EventBridge Rule: Scheduler to run a Lambda Function every 5 minutes
-  LockbitScheduler:
-    Type: AWS::Events::Rule
-    Properties:
-      EventBusName: default
-      Description: "CloudWatch Event Rule / Schedule to trigger Lambda"
-      Name: LockbitScheduler
-      ScheduleExpression: rate(5 minutes)
-      State: !Ref EventBridgeScheduler
-      Targets:
-        - Id: "apoEC2TaggingInfected"
-          Arn: !GetAtt
-            - apoEC2TaggingInfected
-            - Arn
-
-  #Lambda Invoke Permissions for apoEC2TaggingInfected Lambda Function
-  apoEC2TaggingInfectedInvokePermissions:
-    DependsOn:
-      - apoEC2TaggingInfected
-    Type: "AWS::Lambda::Permission"
-    Properties:
-      FunctionName: !Ref "apoEC2TaggingInfected"
-      Action: "lambda:InvokeFunction"
-      Principal: "events.amazonaws.com"
-
-  #IAM Role for the apoEC2TaggingInfected Function
-  IAMRoleforLambdaQueryTagging:
-    Type: AWS::IAM::Role
-    Properties:
-      RoleName: IAMRoleforLambdaQueryTagging
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          -
-            Effect: Allow
-            Principal:
-              Service:
-                - lambda.amazonaws.com
-            Action:
-              - sts:AssumeRole
-      Path: /
-      Policies:
-        -
-          PolicyName: EC2TaggingPolicy
-          PolicyDocument:
-            Version: 2012-10-17
-            Statement:
-            -
-              Effect: Allow
-              Action:
-                - logs:CreateLogGroup
-                - logs:CreateLogStream
-                - logs:PutLogEvents
-                - logs:GetLogEvents
-                - logs:StartQuery
-                - logs:PutMetricFilter
-                - logs:FilterLogEvents
-                - logs:DescribeLogGroups
-                - logs:GetQueryResults
-              Resource: 
-                - arn:aws:logs:*:*:*
-            - Effect: Allow
-              Action:
-                - ec2:DescribeInstances
-                - ec2:CreateTags
-              Resource: '*'
-            - Effect: Allow
-              Action:
-                - iam:PassRole
-              Condition:
-                StringEquals:
-                  iam:PassedToService:
-                    - ec2.amazonaws.com
-              Resource:
-                - '*'
-            - Effect: Allow
-              Action:
-                - lambda:InvokeFunction
-              Resource:
-                - '*'
-            - Effect: Allow
-              Action:
-                - iam:PassRole
-              Resource: '*'
-              Condition:
-                StringEquals:
-                  iam:PassedToService: lambda.amazonaws.com           
-
-  #Lambda Function and IAM Role to tag resources with the key/value for example health/infected
-  apoEC2TaggingInfected:
-    Type: "AWS::Lambda::Function"
-    Properties:
-      FunctionName: apoEC2TaggingInfected
-      Handler: index.lambda_handler # <python_file_name>.<Function_Name>
-      Environment:
-        Variables:
-          LAMBDA_TIMEOUT: '120'
-          TAG_KEY: !Ref TagKey
-          TAG_VALUE: !Ref TagValue
-      Runtime: python3.12
-      Architectures:
-        - x86_64
-      Timeout: 120
-      Role:
-        Fn::GetAtt:
-          - "IAMRoleforLambdaQueryTagging"
-          - "Arn"
-      Code:
-        ZipFile: |
-            # coding=utf-8
-            import boto3
-            import time
-            import os
-
-            def execute_insights_query(log_group_name, query):
-                client = boto3.client('logs')
-                response = client.start_query(
-                    logGroupName=log_group_name,
-                    startTime=int((int(time.time()) - 60 * 60 * 3) * 1000),  # 3 hours ago
-                    endTime=int(time.time() * 1000),
-                    queryString=query,
-                    limit=1
-                )
-                print(f'Query was started')
-                query_id = response['queryId']
-                response = None
-
-                while response == None or response['status'] == 'Running':
-                    print(f'Waiting for query in log group {log_group_name} to complete ...')
-                    time.sleep(1)
-                    print('Slept for 1 second')
-                    response = client.get_query_results(
-                        queryId=query_id
-                    )
-                    print(f'Query ID was retrieved')
-                print('first group was retrieved fully')
-                return response['results']
-
-            def lambda_handler(event, context):
-                # CloudWatch Logs Insights query
-                query = '''
-                    fields @timestamp, @logStream, @log
-                    | filter @message like /curl/
-                    | parse @message 'CommandLine: *CurrentDirectory' as CommandLine
-                    | parse @message 'CurrentDirectory: *User' as CurrentDirectory
-                    | parse @message 'User: *LogonGuid' as User
-                    | parse @message 'Hashes: *ParentProcessGuid' as Hashes
-                    | parse @message 'ParentCommandLine: *ParentUser' as ParentCommandLine
-                    | parse @message 'Host Application = *Engine Version' as HostApplication
-                    | parse @message 'Command Name = *Command Type' as CommandName
-                    | sort @timestamp desc
-                '''
-
-                # Get all log groups
-                logs_client = boto3.client('logs')
-                log_groups = [group['logGroupName'] for group in logs_client.describe_log_groups()['logGroups']]
-                excluded_log_groups = ['/aws/lambda/apoEC2TaggingInfected','/aws/lambda/apoFileCreationLambda', '/aws/lambda/apoIsolationLambdaFunction', '/aws/lambda/apoDynamoDBQueryLogsFunction', 'apoCloudTrailLogs', 'apoVPCFlowLogs', 'apoLockBitGroup']
-                # Iterate over each log group
-                for log_group_name in log_groups:
-                    if log_group_name in excluded_log_groups:
-                      print(f"Skipping log group {log_group_name} (excluded).")
-                      continue
-                    # Execute CloudWatch Logs Insights query for each log group
-                    query_results = execute_insights_query(log_group_name, query)
-                    print('successfully queried all logs')
-                    # Check if the query retrieves any result
-                    if query_results:
-                        print('result was found')
-                        print('Query Result:', query_results)
-                        # Extract the instance ID from the log stream name
-                        for result_list in query_results:
-                            for result in result_list:
-                                if result['field'] == '@logStream':
-                                    log_stream_name = result['value']
-                                    instance_id_start = log_stream_name.find("i-0")
-                                    if instance_id_start != -1:
-                                        instance_id = log_stream_name[instance_id_start:instance_id_start + 19]
-                                        print('InstanceID:', instance_id)
-
-                            # Create an EC2 client
-                        ec2_client = boto3.client('ec2')
-
-                            # Specify the tag key-value pair
-                        TagKey = os.environ['TAG_KEY']
-                        TagValue = os.environ['TAG_VALUE']
-
-                            # Add the tag to the specified EC2 instance
-                        response = ec2_client.create_tags(
-                            Resources=[instance_id],
-                            Tags=[
-                                {
-                                    'Key': TagKey,
-                                    'Value': TagValue
-                                },
-                            ]
-                        )
-
-                        print(f"Tag added to {instance_id}: {response}")
-                    else:
-                        print(f"No results found in the CloudWatch Logs Insights query for log group {log_group_name}.")
+          Value: Caldera        
                         
-#III EC2 Isolation Automation
+#I EC2 Isolation Automation
 
 ## Written by: joseob@amazon.com & adjusted by Ante Popic
 ## Description:  Creates EC2 Incident Response Isolation Workflow
@@ -1440,285 +1105,11 @@ Resources:
       Action: "lambda:InvokeFunction"
       Principal: "events.amazonaws.com"
 
-  apoLockBitGroup:
-    Type: 'AWS::Logs::LogGroup'
-    Properties:
-      LogGroupName: apoLockBitGroup
-
-  LockBitDashboard:
-    DependsOn: apoLockBitGroup
-    Type: 'AWS::CloudWatch::Dashboard'
-    Properties:
-      DashboardName: 'LockBitDashboard'
-      DashboardBody: !Sub |
-        {
-          "widgets": [
-            {
-              "type": "log",
-              "x": 0,
-              "y": 0,
-              "width": 24,
-              "height": 6,
-              "properties": {
-                "query": "SOURCE '${apoLockBitGroup}' | fields @timestamp, @logStream, @log | filter @message like /malware.exe/ | parse @message 'CommandLine: *CurrentDirectory' as CommandLine | parse @message 'CurrentDirectory: *User' as CurrentDirectory | parse @message 'User: *LogonGuid' as User | parse @message 'Hashes: *ParentProcessGuid' as Hashes | parse @message 'ParentCommandLine: *ParentUser' as ParentCommandLine | parse @message 'Host Application = *Engine Version' as HostApplication | parse @message 'Command Name = *Command Type' as CommandName | sort @timestamp desc | stats count() by bin(30s)",
-                "region": "${AWS::Region}",
-                "stacked": false,
-                "view": "bar",
-                "title":  "Events Observed"
-              }
-            },
-            {
-              "type": "log",
-              "x": 0,
-              "y": 6,
-              "width": 12,
-              "height": 6,
-              "properties": {
-                "query": "SOURCE '${apoLockBitGroup}' | fields @timestamp, @logStream | filter @message like /gpg.exe/ | parse @message '\\'CommandLine\\', \\'value\\': \\'*\\\\r\\\\n\\'},' as CommandLine | parse @message '\\'CurrentDirectory\\', \\'value\\': \\'*\\'},' as CurrentDirectory | parse @message '\\'User\\', \\'value\\': \\'*\\\\r\\\\n\\'},' as User | parse @message '\\'Hashes\\', \\'value\\': \\'*\\\\r\\\\n\\'},' as Hashes | parse @message '\\'ParentCommandLine\\', \\'value\\': \\'*\\\\r\\\\n\\'},' as ParentCommandLine | parse @message '\\'HostApplication\\', \\'value\\': \\'*\\\\r\\\\n        \\'},' as HostApplication | parse @message '\\'CommandName\\', \\'value\\': \\'*\\\\r\\\\n        \\'},' as CommandName | sort @timestamp desc",
-                "region": "${AWS::Region}",
-                "stacked": false,
-                "view": "table",
-                "title":  "Data Encryption via GPG"
-              }
-            },
-            {
-              "type": "log",
-              "x": 0,
-              "y": 12,
-              "width": 12,
-              "height": 6,
-              "properties": {
-                "query": "SOURCE '${apoLockBitGroup}' | fields @timestamp, @logStream | filter @message like /Set-MpPreference -DisableRealtimeMonitoring 1; Set-MpPreference -DisableBehaviorMonitoring 1; Set-MpPreference -DisableScriptScanning 1; Set-MpPreference -DisableBlockAtFirstSeen 1/ | parse @message '\\'CommandLine\\', \\'value\\': \\'*\\\\r\\\\n\\'},' as CommandLine | parse @message '\\'CurrentDirectory\\', \\'value\\': \\'*\\'},' as CurrentDirectory | parse @message '\\'User\\', \\'value\\': \\'*\\\\r\\\\n\\'},' as User | parse @message '\\'Hashes\\', \\'value\\': \\'*\\\\r\\\\n\\'},' as Hashes | parse @message '\\'ParentCommandLine\\', \\'value\\': \\'*\\\\r\\\\n\\'},' as ParentCommandLine | parse @message '\\'HostApplication\\', \\'value\\': \\'*\\\\r\\\\n        \\'},' as HostApplication | parse @message '\\'CommandName\\', \\'value\\': \\'*\\\\r\\\\n        \\'},' as CommandName | sort @timestamp desc",
-                "region": "${AWS::Region}",
-                "stacked": false,
-                "view": "table",
-                "title":  "Windows Defender Tampering"
-              }
-            },
-            {
-              "type": "log",
-              "x": 12,
-              "y": 6,
-              "width": 12,
-              "height": 6,
-              "properties": {
-                "query": "SOURCE '${apoLockBitGroup}' | fields @timestamp, @logStream | filter @message like /malware.exe/ | parse @message '\\'CommandLine\\', \\'value\\': \\'*\\\\r\\\\n\\'},' as CommandLine | parse @message '\\'CurrentDirectory\\', \\'value\\': \\'*\\'},' as CurrentDirectory | parse @message '\\'User\\', \\'value\\': \\'*\\\\r\\\\n\\'},' as User | parse @message '\\'Hashes\\', \\'value\\': \\'*\\\\r\\\\n\\'},' as Hashes | parse @message '\\'ParentCommandLine\\', \\'value\\': \\'*\\\\r\\\\n\\'},' as ParentCommandLine | parse @message '\\'HostApplication\\', \\'value\\': \\'*\\\\r\\\\n        \\'},' as HostApplication | parse @message '\\'CommandName\\', \\'value\\': \\'*\\\\r\\\\n        \\'},' as CommandName | sort @timestamp desc",
-                "region": "${AWS::Region}",
-                "stacked": false,
-                "view": "table",
-                "title":  "Remote Access Trojan"
-              }
-            },
-            {
-              "type": "log",
-              "x": 12,
-              "y": 12,
-              "width": 12,
-              "height": 6,
-              "properties": {
-                "query": "SOURCE '${apoLockBitGroup}' | fields @timestamp, @logStream | filter @message like /rclone/ | parse @message '\\'CommandLine\\', \\'value\\': \\'*\\\\r\\\\n\\'},' as CommandLine | parse @message '\\'CurrentDirectory\\', \\'value\\': \\'*\\'},' as CurrentDirectory | parse @message '\\'User\\', \\'value\\': \\'*\\\\r\\\\n\\'},' as User | parse @message '\\'Hashes\\', \\'value\\': \\'*\\\\r\\\\n\\'},' as Hashes | parse @message '\\'ParentCommandLine\\', \\'value\\': \\'*\\\\r\\\\n\\'},' as ParentCommandLine | parse @message '\\'HostApplication\\', \\'value\\': \\'*\\\\r\\\\n        \\'},' as HostApplication | parse @message '\\'CommandName\\', \\'value\\': \\'*\\\\r\\\\n        \\'},' as CommandName | sort @timestamp desc",
-                "region": "${AWS::Region}",
-                "stacked": false,
-                "view": "table",
-                "title":  "Exfiltration via Rclone"
-              }
-            }
-          ]
-        }
-
-  apoDynamoDBQueryLogsFunctionRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: lambda.amazonaws.com
-            Action: sts:AssumeRole
-      Policies:
-        - PolicyName: apoDynamoDBQueryLogsFunctionPolicy
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action:
-                  - dynamodb:Scan
-                  - dynamodb:GetItem
-                  - logs:StartQuery
-                  - logs:GetQueryResults
-                  - logs:DescribeLogGroups
-                  - logs:CreateLogGroup
-                  - logs:CreateLogStream
-                  - logs:PutLogEvents
-                  - logs:GetLogEvents
-                  - logs:DescribeLogStreams
-                Resource: '*'
-
-  apoDynamoDBQueryLogsFunction:
-    Type: AWS::Lambda::Function
-    Properties:
-      FunctionName: apoDynamoDBQueryLogsFunction
-      Environment:
-        Variables:
-          LOG_GROUP_NAME: !Ref apoLockBitGroup
-      Code:
-        ZipFile: |
-          import boto3
-          import time
-          import json
-          import os
-
-          def lambda_handler(event, context):
-              dynamodb = boto3.resource('dynamodb')
-              cloudwatch_logs = boto3.client('logs')
-              cloudwatch = boto3.client('cloudwatch')
-              
-              log_group_name_lockbit = os.environ['LOG_GROUP_NAME']
-              log_stream_name_lockbit = "LockBitDetectionStream"
-
-              # Specify your DynamoDB table name
-              table_name = 'Detections'
-              table = dynamodb.Table(table_name)
-              print(f"DynamoDB Table was saved successfully. The table is {table}")
-              
-              # Fetch queries from DynamoDB
-              response = table.scan()
-              queries = response.get('Items', [])
-              print(f"Queries fetched. Queries: {queries}")
-
-              # Get all log groups
-              log_groups = [group['logGroupName'] for group in cloudwatch_logs.describe_log_groups()['logGroups']]
-              excluded_log_groups = ['/aws/lambda/apoEC2TaggingInfected','/aws/lambda/apoFileCreationLambda', '/aws/lambda/apoIsolationLambdaFunction', '/aws/lambda/apoDynamoDBQueryLogsFunction', 'apoCloudTrailLogs', 'apoVPCFlowLogs', 'apoLockBitGroup']
-
-              # Create the log stream
-            
-              # Check if the log stream exists
-              logstreamexistence = cloudwatch_logs.describe_log_streams(
-                  logGroupName=log_group_name_lockbit,
-                  logStreamNamePrefix=log_stream_name_lockbit
-              )
-              if len(logstreamexistence['logStreams']) == 0:
-                cloudwatch_logs.create_log_stream(
-                    logGroupName=log_group_name_lockbit,
-                    logStreamName=log_stream_name_lockbit
-                )
-
-              for query_item in queries:
-                  detection_name = query_item['DetectionName']
-
-                  if not detection_name:
-                      print(f"No query string for {detection_name}")
-                      continue
-
-                  for log_group_name in log_groups:
-                      print(f"Log Group Active:{log_group_name}")
-                      if log_group_name in excluded_log_groups:
-                          print(f"Skipping log group {log_group_name} (excluded).")
-                          continue
-
-                      # Execute CloudWatch Logs Insights Query for each log group
-                      log_query_response = cloudwatch_logs.start_query(
-                          logGroupName=log_group_name,
-                          startTime=int((time.time() - 3600) * 1000),  # 60 minutes ago
-                          endTime=int(time.time() * 1000),            # current time
-                          queryString=detection_name,
-                      )
-                      print(f"Query was successfull. The Response is: {log_query_response}")
-                      query_id = log_query_response['queryId']
-                      print(f"Query_Id: {query_id}")
-                
-                      query_status = None
-                      while query_status != 'Complete':
-                          query_status = cloudwatch_logs.get_query_results(queryId=query_id)['status']
-                          if query_status == 'Failed' or query_status == 'Cancelled':
-                              print(f"Query for {detection_name} in log group {log_group_name} failed or was cancelled.")
-                              break
-                          time.sleep(2)
-
-                      # Additional implementation needed here
-                      query_results = []
-                      results_response = cloudwatch_logs.get_query_results(queryId=query_id)
-                      print(f"Result Response: {results_response}")
-              
-                      # Capture the first 3 query results
-                      for idx, result in enumerate(results_response['results']):
-                          if idx < 3:  # Capture the first 3 results
-                              query_results.append(result)
-                      print(f"Captured the first {len(query_results)} query result(s) for {detection_name} in log group {log_group_name}:")
-                      
-                      if len(query_results) > 0:
-                          query_results_str = "\n".join(map(str,query_results))
-                          print(query_results_str)
-                          cloudwatch_logs.put_log_events(
-                              logGroupName=log_group_name_lockbit,
-                              logStreamName=log_stream_name_lockbit,  # Replace with your log stream name
-                              logEvents=[
-                                  {
-                                      'timestamp': int(round(time.time() * 1000)),
-                                      'message': query_results_str
-                                  }
-                              ]
-                          )
-                      print(f"Logs were pushed successfull to group")
-                      print(f"Top 3 query results for {detection_name} in log group {log_group_name}:")
-                      if len(query_results) > 0:
-                          for idx, query_result in enumerate(query_results, start=1):
-                              print(f"Result {idx}:\n{query_result}\n")
-                          
-                      print(f"Query Result: {query_results}")
-                      # Push the number of results as a custom CloudWatch metric
-                      print(f"Executed query for the detection in log group {log_group_name}, Query ID: {query_id}")
-
-      Handler: index.lambda_handler
-      Role: !GetAtt apoDynamoDBQueryLogsFunctionRole.Arn
-      Runtime: python3.12
-      Timeout: 900
-
-  GuardDutyFindingEventRule:
-    DependsOn:  CalderaInstance
-    Type: AWS::Events::Rule
-    Properties:
-      Name: GuardDutyFindingForMaliciousIP
-      Description: "Event rule for triggering Lambda on specific GuardDuty finding"
-      EventPattern:
-        source:
-          - "aws.guardduty"
-        detail-type:
-          - "GuardDuty Finding"
-        detail:
-          service:
-            action:
-              networkConnectionAction:
-                remoteIpDetails:
-                  ipAddressV4:
-                    - Fn::GetAtt: CalderaInstance.PublicIp
-      Targets:
-        - Id: "apoDynamoDBQueryLogsFunction"
-          Arn: !GetAtt
-            - apoDynamoDBQueryLogsFunction
-            - Arn
-
-  #Lambda Invoke Permissions for apoDynamoDBQueryLogsFunction Lambda Function
-  apoDynamoDBQueryLogsFunctionInvokePermissions:
-    DependsOn:
-      - apoDynamoDBQueryLogsFunction
-    Type: "AWS::Lambda::Permission"
-    Properties:
-      FunctionName: !Ref "apoDynamoDBQueryLogsFunction"
-      Action: "lambda:InvokeFunction"
-      Principal: "events.amazonaws.com"
-
 Outputs:
   CalderaSecurityGroupId:
     Value: !Ref CalderaSecurityGroup
     Export:
       Name: CalderaSecurityGroupId
-
- # Win10SecurityGroupId:
- #   Value: !Ref Win10SecurityGroup
- #   Export:
- #     Name: Win10SecurityGroupId
 
   DVWASecurityGroupId:
     Value: !Ref DVWASecurityGroup
@@ -1729,11 +1120,6 @@ Outputs:
     Value: !Ref JuiceShopSecurityGroup
     Export:
       Name: JuiceShopSecurityGroupId
-
-  # Win10PublicIP:
-  #   Value: !GetAtt Win10Instance.PublicIp
-  #   Export:
-  #     Name: Win10InstancePublicIp
 
   JuicePublicIP:
     Value: !GetAtt DVWAInstance.PublicIp
