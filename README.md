@@ -1,11 +1,11 @@
 # AWS Emulation Lab
 Development of an AWS Emulation Lab in form of an IaC CloudFormation template. That template is used to build up a lab in AWS, which will offer the testing of security mechanisms based on Adversary Emulation.
 
-- [AWS Emulation Lab No Win10](./AWS_Emulation_Lab_No_Win10)  
+- [AWS Emulation Lab No Win10](./AWS Emulation Lab No Win10)  
   Contains configurations and resources for building the lab environment without a Windows 10 instance, due to licence issues. 
   Includes:
 
-- [AWS Emulation Lab Win10](./AWS_Emulation_Lab_Win10)  
+- [AWS Emulation Lab Win10](./AWS Emulation Lab Win10)  
   Contains configurations and resources for building the lab environment with a Windows 10 instance.
 
 
