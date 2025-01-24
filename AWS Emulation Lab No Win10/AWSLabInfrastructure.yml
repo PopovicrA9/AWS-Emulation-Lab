@@ -19,6 +19,7 @@ Metadata:
           - DamnVulnerableWebApplicationIP
           - JuiceShopApplicationIP
           - CalderaIP
+          - SplunkIP
       - Label:
           default: "Launch GuardDuty"
         Parameters:
@@ -56,6 +57,11 @@ Parameters:
     Default: "172.31.17.129"
     Description: Please provide a private IP address for the OWASP Juice Shop Webserver. This IP address should be in the same subnet as the DVWA Webserver.
 
+  SplunkIP:
+    Type: String
+    Default: "172.31.18.129"
+    Description: Please provide a private IP address for the OWASP Juice Shop Webserver. This IP address should be in the same subnet as the DVWA and JuiceShop Webserver.
+
   CalderaIP:
     Type: String
     Default: "172.31.34.129"
@@ -67,7 +73,7 @@ Parameters:
 
   SubnetforWebservers:
     Type: AWS::EC2::Subnet::Id
-    Description: Subnet for the DVWA Webserver & OWASP Juice Shop Webserver.
+    Description: Subnet for the DVWA Webserver, OWASP Juice Shop Webserver and SIEM Splunk Webserver.
 
   SubnetforPCs:
     Type: AWS::EC2::Subnet::Id
@@ -408,7 +414,7 @@ Resources:
       CloudWatchLogsRoleArn: !GetAtt apoCloudTrailLogsRole.Arn
       S3BucketName: !Ref apos3simulationlabbucket
       IsLogging: true
-      IsMultiRegionTrail: false
+      IsMultiRegionTrail: true
       EventSelectors:
       - IncludeManagementEvents: true
       - ReadWriteType: All
@@ -416,6 +422,38 @@ Resources:
       InsightSelectors:
       - InsightType: ApiCallRateInsight
       - InsightType: ApiErrorRateInsight
+  #Make possible for IAM Role to assign to SIEM Splunk EC2
+  SplunkRoleForAWSInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: "/"
+      Roles:
+        - Ref: SplunkRoleForAWS
+  #IAM Role for SIEM Splunk Data Onboarding from CloudWatch Logs
+  SplunkRoleForAWS:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: SplunkRoleForAWS
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: InputPermission
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - 
+                Effect: Allow
+                Action:
+                  - logs:DescribeLogGroups
+                  - logs:DescribeLogStreams
+                  - logs:GetLogEvents
+                  - s3:GetBucketLocation
+                Resource: "*"
   #VPC Flow Logs
   apoVPCFlowLogs:
     Type: AWS::EC2::FlowLog
@@ -501,6 +539,21 @@ Resources:
     Type: 'AWS::EC2::VPCDHCPOptionsAssociation'
     Properties:
       DhcpOptionsId: !Ref DHCPOptions
+      VpcId: !Ref VPCid
+  #SIEM Splunk Security Group
+  SplunkSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Enable Splunk to be accessed by user
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref MyAWSIP
+        - IpProtocol: tcp
+          FromPort: 8000
+          ToPort: 8000
+          CidrIp: !Ref MyAWSIP
       VpcId: !Ref VPCid
   #Caldera Security Group
   CalderaSecurityGroup:
@@ -598,6 +651,10 @@ Resources:
           FromPort: 53
           ToPort: 53
           SourceSecurityGroupId: !Ref JuiceShopSecurityGroup
+        - IpProtocol: tcp
+          FromPort: 53
+          ToPort: 53
+          SourceSecurityGroupId: !Ref SplunkSecurityGroup
         #3 rules for DNS UDP
         - IpProtocol: udp
           FromPort: 53
@@ -667,6 +724,20 @@ Resources:
           ToPort: 445
           SourceSecurityGroupId: !Ref JuiceShopSecurityGroup
       VpcId: !Ref VPCid
+  #Splunk Instance
+  SplunkInstance:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      ImageId:  ami-09d9db2f1e392da40
+      InstanceType: t2.large
+      SubnetId: !Ref SubnetforWebservers
+      PrivateIpAddress: !Ref SplunkIP
+      SecurityGroupIds: 
+        - Ref: SplunkSecurityGroup
+      IamInstanceProfile: !Ref SplunkRoleForAWSInstanceProfile
+      Tags:
+        - Key: Name
+          Value: Splunk 
   #Active Directory Instance
   ADInstance:
     Type: 'AWS::EC2::Instance'
