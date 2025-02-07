@@ -17,8 +17,10 @@ Metadata:
           - MyAWSIP
           - ActiveDirectoryIP
           - DamnVulnerableWebApplicationIP
+          - DamnVulnerableWebApplication2IP
           - JuiceShopApplicationIP
           - CalderaIP
+          - KaliIP
           - SplunkIP
       - Label:
           default: "Launch GuardDuty"
@@ -52,6 +54,11 @@ Parameters:
     Default: "172.31.16.129"
     Description: Please provide a private IP address for the DVWA Webserver. This IP address should be in the same subnet as the OWASP Juice Shop Webserver.
 
+  DamnVulnerableWebApplication2IP:
+    Type: String
+    Default: "172.31.16.130"
+    Description: Please provide a private IP address for the DVWA Webserver. This IP address should be in the same subnet as the OWASP Juice Shop Webserver.
+
   JuiceShopApplicationIP:
     Type: String
     Default: "172.31.17.129"
@@ -67,6 +74,11 @@ Parameters:
     Default: "172.31.34.129"
     Description: Please provide a private IP address for the Caldera Simulation system.
   
+  KaliIP:
+    Type: String
+    Default: "172.31.34.130"
+    Description: Please provide a private IP address for the Kali Linux Attacker Machine
+
   SubnetforAD:
     Type: AWS::EC2::Subnet::Id
     Description: Subnet for Active Directory.
@@ -274,6 +286,7 @@ Resources:
       - CustomInventoryDocument
       - ADInstance
       - DVWAInstance
+      - DVWAInstanceTwo
     Type: 'AWS::SSM::Association'
     Properties:
       Name: 'CustomInventoryDocument' #Specify file needed  for Inventory Collection
@@ -281,8 +294,8 @@ Resources:
         - Key: InstanceIds
           Values:
             - !Ref ADInstance
-            #- !Ref Win10Instance
             - !Ref DVWAInstance
+            - !Ref DVWAInstanceTwo
             #- !Ref JuiceInstance not needed yet
       ScheduleExpression: 'rate(30 minutes)'  #Adjust the schedule as needed
       DocumentVersion: '$DEFAULT'
@@ -555,7 +568,7 @@ Resources:
           ToPort: 8000
           CidrIp: !Ref MyAWSIP
       VpcId: !Ref VPCid
-  #Caldera Security Group
+  #Caldera and Kali Security Group
   CalderaSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
@@ -569,6 +582,14 @@ Resources:
           FromPort: 8888
           ToPort: 8888
           CidrIp: !Ref MyAWSIP
+        - IpProtocol: tcp
+          FromPort: 5901
+          ToPort: 5901
+          CidrIp: !Ref MyAWSIP
+        - IpProtocol: tcp
+          FromPort: 8888
+          ToPort: 8888
+          SourceSecurityGroupId: !Ref CalderaSecurityGroup
       VpcId: !Ref VPCid
   #DVWA Security Group
   DVWASecurityGroup:
@@ -584,6 +605,18 @@ Resources:
           FromPort: 80
           ToPort: 80
           CidrIp: !Ref MyAWSIP
+        - IpProtocol: tcp
+          FromPort: 3389
+          ToPort: 3389
+          SourceSecurityGroupId: !Ref CalderaSecurityGroup
+        - IpProtocol: tcp
+          FromPort: 445
+          ToPort: 445
+          SourceSecurityGroupId: !Ref CalderaSecurityGroup
+        - IpProtocol: tcp
+          FromPort: 139
+          ToPort: 139
+          SourceSecurityGroupId: !Ref CalderaSecurityGroup
       VpcId: !Ref VPCid
   #OWASP Juice Shop Security Group
   JuiceShopSecurityGroup:
@@ -599,6 +632,10 @@ Resources:
           FromPort: 3000
           ToPort: 3000
           CidrIp: !Ref MyAWSIP
+        - IpProtocol: tcp
+          FromPort: 3389
+          ToPort: 3389
+          SourceSecurityGroupId: !Ref CalderaSecurityGroup
       VpcId: !Ref VPCid
   #Active Directory Security Group
   ADSecurityGroup:
@@ -606,6 +643,10 @@ Resources:
     Properties:
       GroupDescription: Enable the Active Directory Ports and communication to domain joined systems
       SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3389
+          ToPort: 3389
+          SourceSecurityGroupId: !Ref CalderaSecurityGroup
         #3 rules for allowing RPC communication TCP
         - IpProtocol: tcp
           FromPort: 1024
@@ -655,6 +696,10 @@ Resources:
           FromPort: 53
           ToPort: 53
           SourceSecurityGroupId: !Ref SplunkSecurityGroup
+        - IpProtocol: tcp
+          FromPort: 53
+          ToPort: 53
+          SourceSecurityGroupId: !Ref CalderaSecurityGroup
         #3 rules for DNS UDP
         - IpProtocol: udp
           FromPort: 53
@@ -723,6 +768,14 @@ Resources:
           FromPort: 445
           ToPort: 445
           SourceSecurityGroupId: !Ref JuiceShopSecurityGroup
+        - IpProtocol: tcp
+          FromPort: 445
+          ToPort: 445
+          SourceSecurityGroupId: !Ref CalderaSecurityGroup
+        - IpProtocol: tcp
+          FromPort: 139
+          ToPort: 139
+          SourceSecurityGroupId: !Ref CalderaSecurityGroup
       VpcId: !Ref VPCid
   #Splunk Instance
   SplunkInstance:
@@ -766,6 +819,22 @@ Resources:
       Tags:
         - Key: Name
           Value: DVWAServer
+
+  #DVWA Instance
+  DVWAInstanceTwo:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      ImageId: ami-070148ff9e3d471e5
+      InstanceType: t2.medium
+      SubnetId: !Ref SubnetforWebservers
+      PrivateIpAddress: !Ref DamnVulnerableWebApplication2IP
+      SecurityGroupIds:
+        - Ref: DVWASecurityGroup
+      IamInstanceProfile: !Ref CloudWatchAgentForLogsRoleInstanceProfile
+      Tags:
+        - Key: Name
+          Value: DVWAServerTwo      
+
   #OWASP Juice Shop Instance
   JuiceInstance:
     Type: 'AWS::EC2::Instance'
@@ -780,11 +849,12 @@ Resources:
       Tags:
         - Key: Name
           Value: JuiceShop
+
   #Caldera Instance
   CalderaInstance:
     Type: 'AWS::EC2::Instance'
     Properties:
-      ImageId:  ami-0c65e8fea760ddf67
+      ImageId:  ami-0b6dbecad9381c1a1
       InstanceType: t2.large
       SubnetId: !Ref SubnetforPCs
       PrivateIpAddress: !Ref CalderaIP
@@ -793,7 +863,22 @@ Resources:
       IamInstanceProfile: !Ref CloudWatchAgentForLogsRoleInstanceProfile
       Tags:
         - Key: Name
-          Value: Caldera        
+          Value: Caldera
+
+  #Kali Linux Instance
+  KaliLinuxInstance:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      ImageId:  ami-0227c0b52580ea287
+      InstanceType: t2.medium
+      SubnetId: !Ref SubnetforPCs
+      PrivateIpAddress: !Ref KaliIP
+      SecurityGroupIds: 
+        - Ref: CalderaSecurityGroup
+      IamInstanceProfile: !Ref CloudWatchAgentForLogsRoleInstanceProfile
+      Tags:
+        - Key: Name
+          Value: Kali     
                         
 #I EC2 Isolation Automation
 
@@ -940,7 +1025,6 @@ Resources:
           CloudWatchAgentForLogsRoleInstanceProfile: !GetAtt 
             - CloudWatchAgentForLogsRoleInstanceProfile
             - Arn
-          #Win10SecurityGroup: !Ref Win10SecurityGroup
           JuiceShopSecurityGroup: !Ref JuiceShopSecurityGroup
           DVWASecurityGroup: !Ref DVWASecurityGroup
           CalderaSecurityGroup: !Ref CalderaSecurityGroup
@@ -1006,7 +1090,15 @@ Resources:
                       'iam_role_arn': os.environ['CloudWatchAgentForLogsRoleInstanceProfile'],
                       'security_group_id': os.environ['DVWASecurityGroup']
                   },
+                    'dvwaservertwo': {
+                      'iam_role_arn': os.environ['CloudWatchAgentForLogsRoleInstanceProfile'],
+                      'security_group_id': os.environ['DVWASecurityGroup']
+                  },
                   'caldera': {
+                      'iam_role_arn': os.environ['CloudWatchAgentForLogsRoleInstanceProfile'],
+                      'security_group_id': os.environ['CalderaSecurityGroup']
+                  },
+                  'kali': {
                       'iam_role_arn': os.environ['CloudWatchAgentForLogsRoleInstanceProfile'],
                       'security_group_id': os.environ['CalderaSecurityGroup']
                   },
@@ -1187,17 +1279,32 @@ Outputs:
     Export:
       Name: DVWASecurityGroupId
 
+  DVWAPublicIP:
+    Value: !GetAtt DVWAInstance.PublicIp
+    Export:
+      Name: DVWAInstancePublicIp
+
+  DVWAPublic2IP:
+    Value: !GetAtt DVWAInstanceTwo.PublicIp
+    Export:
+      Name: DVWAInstanceTwoPublicIp
+
   JuiceShopSecurityGroupId:
     Value: !Ref JuiceShopSecurityGroup
     Export:
       Name: JuiceShopSecurityGroupId
 
   JuicePublicIP:
-    Value: !GetAtt DVWAInstance.PublicIp
-    Export:
-      Name: DVWAInstancePublicIp
-
-  DVWAPublicIP:
     Value: !GetAtt JuiceInstance.PublicIp
     Export:
       Name: JuiceInstancePublicIp
+
+  ADSecurityGroupId:
+    Value: !Ref ADSecurityGroup
+    Export:
+      Name: ADSecurityGroupId
+
+  ADPublicIP:
+    Value: !GetAtt ADInstance.PublicIp
+    Export:
+      Name: ADPublicIp
