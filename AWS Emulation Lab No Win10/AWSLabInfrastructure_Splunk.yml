@@ -727,8 +727,8 @@ Resources:
   SplunkInstance:
     Type: 'AWS::EC2::Instance'
     Properties:
-      ImageId:  ami-0cdfe1d73727e2187
-      InstanceType: t2.large
+      ImageId:  ami-098f0fe5e71943e2e
+      InstanceType: t2.2xlarge
       SubnetId: !Ref SubnetforWebservers
       PrivateIpAddress: !Ref SplunkIP
       SecurityGroupIds: 
@@ -784,7 +784,7 @@ Resources:
   CalderaInstance:
     Type: 'AWS::EC2::Instance'
     Properties:
-      ImageId:  ami-0b6dbecad9381c1a1
+      ImageId:  ami-0593979cab5173d2b
       InstanceType: t2.large
       SubnetId: !Ref SubnetforPCs
       PrivateIpAddress: !Ref CalderaIP
