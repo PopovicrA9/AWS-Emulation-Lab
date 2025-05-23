@@ -730,7 +730,7 @@ Resources:
     Type: 'AWS::EC2::Instance'
     Properties:
       ImageId:  ami-0805998f11a821197
-      InstanceType: t2.large
+      InstanceType: t2.2xlarge
       SubnetId: !Ref SubnetforWebservers
       PrivateIpAddress: !Ref SplunkIP
       SecurityGroupIds: 
