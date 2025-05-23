@@ -133,7 +133,7 @@ Resources:
                   - s3:GetObject
                   - s3:PutObject
                 Resource: 
-                  - arn:aws:s3:::apos3simulationlabbucket/*
+                  - arn:aws:s3:::aposimulationlabbucket/*
               - Effect: Allow
                 Action:
                   - logs:CreateLogGroup
@@ -143,7 +143,7 @@ Resources:
 
   #Function to create the custom object, which is just a file with one IP Address as the entry.
   apoFileCreationLambda:
-    DependsOn: apos3simulationlabbucket
+    DependsOn: aposimulationlabbucket
     Type: AWS::Lambda::Function
     Properties:
       Handler: index.handler
@@ -212,12 +212,14 @@ Resources:
     DependsOn: 
       - apoFileCreationLambda
       - CalderaInstance
+      - aposimulationlabbucket
+      - aposimulationlabbucketPolicy
     Type: AWS::CloudFormation::CustomResource
     Properties:
       ServiceToken: !GetAtt apoFileCreationLambda.Arn
       IPAddress:  
         Fn::GetAtt: CalderaInstance.PublicIp
-      OutputBucket: !Ref apos3simulationlabbucket
+      OutputBucket: !Ref aposimulationlabbucket
 
   #DynamoDB Detection Table
   DetectionTable:
@@ -317,16 +319,16 @@ Resources:
             description: "Define a path to Registry Keys you want to collect"
             displayType: textarea
   #S3 Bucket for CloudTrail Log Storage
-  apos3simulationlabbucket:
+  aposimulationlabbucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: apos3simulationlabbucket
+      BucketName: aposimulationlabbucket
   #S3 Bucket Policy for S3 Bucket
-  apos3simulationlabbucketPolicy:
-    DependsOn: apos3simulationlabbucket
+  aposimulationlabbucketPolicy:
+    DependsOn: aposimulationlabbucket
     Type: AWS::S3::BucketPolicy
     Properties:
-      Bucket: !Ref apos3simulationlabbucket
+      Bucket: !Ref aposimulationlabbucket
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -335,13 +337,13 @@ Resources:
             Principal:
               Service: cloudtrail.amazonaws.com
             Action: s3:GetBucketAcl
-            Resource: !Sub arn:aws:s3:::${apos3simulationlabbucket}
+            Resource: !Sub arn:aws:s3:::${aposimulationlabbucket}
           - Sid: AWSCloudTrailWrite
             Effect: Allow
             Principal:
               Service: cloudtrail.amazonaws.com
             Action: s3:PutObject
-            Resource: !Sub arn:aws:s3:::${apos3simulationlabbucket}/AWSLogs/${AWS::AccountId}/*
+            Resource: !Sub arn:aws:s3:::${aposimulationlabbucket}/AWSLogs/${AWS::AccountId}/*
             Condition:
               StringEquals:
                 s3:x-amz-acl: bucket-owner-full-control
@@ -349,7 +351,7 @@ Resources:
   #Threat Intelligence File linked to GuardDuty
   LockBitThreatIntel:
     DependsOn: 
-      - apos3simulationlabbucket
+      - aposimulationlabbucket
       - GuardDutyDetector
       - LockBitIPAddress
     Type: AWS::GuardDuty::ThreatIntelSet
@@ -358,7 +360,7 @@ Resources:
       DetectorId: !Ref GuardDutyDetector
       Format: TXT
       Location:
-        Fn::Sub: https://s3.amazonaws.com/${apos3simulationlabbucket}/LockBitIP.txt
+        Fn::Sub: https://s3.amazonaws.com/${aposimulationlabbucket}/LockBitIP.txt
       Name: LockBitThreatIntel
   #CloudTrail Log Group
   apoCloudTrailLogsGroup:
@@ -403,15 +405,15 @@ Resources:
   CloudTrailSimulationLab:
     Type: AWS::CloudTrail::Trail
     DependsOn: 
-      - apos3simulationlabbucket
-      - apos3simulationlabbucketPolicy
+      - aposimulationlabbucket
+      - aposimulationlabbucketPolicy
       - apoCloudTrailLogsRoleInstanceProfile
       - apoCloudTrailLogsRole
     Properties:
       TrailName: CloudTrailSimulationLab 
       CloudWatchLogsLogGroupArn: !GetAtt apoCloudTrailLogsGroup.Arn
       CloudWatchLogsRoleArn: !GetAtt apoCloudTrailLogsRole.Arn
-      S3BucketName: !Ref apos3simulationlabbucket
+      S3BucketName: !Ref aposimulationlabbucket
       IsLogging: true
       IsMultiRegionTrail: true
       EventSelectors:
@@ -727,7 +729,7 @@ Resources:
   SplunkInstance:
     Type: 'AWS::EC2::Instance'
     Properties:
-      ImageId:  ami-0cdfe1d73727e2187
+      ImageId:  ami-098f0fe5e71943e2e
       InstanceType: t2.large
       SubnetId: !Ref SubnetforWebservers
       PrivateIpAddress: !Ref SplunkIP
@@ -741,7 +743,7 @@ Resources:
   ADInstance:
     Type: 'AWS::EC2::Instance'
     Properties:
-      ImageId: ami-050790b9eb8faabd0
+      ImageId: ami-03f6a6fea63f7bbc7
       InstanceType: t2.small
       SubnetId: !Ref SubnetforAD 
       PrivateIpAddress: !Ref ActiveDirectoryIP
@@ -769,7 +771,7 @@ Resources:
   JuiceInstance:
     Type: 'AWS::EC2::Instance'
     Properties:
-      ImageId: ami-0a34dda0dd5275f74
+      ImageId: ami-0c2761b689e1f0100
       InstanceType: t2.small
       SubnetId: !Ref SubnetforWebservers
       PrivateIpAddress: !Ref JuiceShopApplicationIP
@@ -784,7 +786,7 @@ Resources:
   CalderaInstance:
     Type: 'AWS::EC2::Instance'
     Properties:
-      ImageId:  ami-0b6dbecad9381c1a1
+      ImageId:  ami-0593979cab5173d2b
       InstanceType: t2.large
       SubnetId: !Ref SubnetforPCs
       PrivateIpAddress: !Ref CalderaIP

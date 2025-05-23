@@ -1,5 +1,5 @@
 id: 18aa691b-d95e-49c0-b06f-8899a0bd4377
-name: Lockbit
+name: Lockbit_Ante
 description: Lockbit Ransomware
 objective: 495a9828-cab1-44dd-a0ca-66e58177d8cc
 atomic_ordering:
