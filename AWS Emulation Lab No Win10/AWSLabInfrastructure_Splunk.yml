@@ -743,8 +743,8 @@ Resources:
   ADInstance:
     Type: 'AWS::EC2::Instance'
     Properties:
-      ImageId: ami-03f6a6fea63f7bbc7
-      InstanceType: t2.small
+      ImageId: ami-0d09f1040b8eee4b8
+      InstanceType: t2.medium
       SubnetId: !Ref SubnetforAD 
       PrivateIpAddress: !Ref ActiveDirectoryIP
       SecurityGroupIds:
@@ -757,7 +757,7 @@ Resources:
   DVWAInstance:
     Type: 'AWS::EC2::Instance'
     Properties:
-      ImageId: ami-070148ff9e3d471e5
+      ImageId: ami-01cf1457b223b840b
       InstanceType: t2.medium
       SubnetId: !Ref SubnetforWebservers
       PrivateIpAddress: !Ref DamnVulnerableWebApplicationIP
