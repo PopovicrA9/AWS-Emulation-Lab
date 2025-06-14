@@ -757,13 +757,32 @@ Resources:
   DVWAInstance:
     Type: 'AWS::EC2::Instance'
     Properties:
-      ImageId: ami-01cf1457b223b840b
+      ImageId: ami-0a43deb0db9bcc46a
       InstanceType: t2.medium
       SubnetId: !Ref SubnetforWebservers
       PrivateIpAddress: !Ref DamnVulnerableWebApplicationIP
       SecurityGroupIds:
         - Ref: DVWASecurityGroup
       IamInstanceProfile: !Ref CloudWatchAgentForLogsRoleInstanceProfile
+      UserData:
+        Fn::Base64: 
+          !Sub |
+            <powershell>
+            $log = "C:\Windows\Temp\user-data.log"
+            New-Item -Path $log -ItemType file -Force
+            "User-data execution started at $(Get-Date)" | Out-File $log -Append
+
+            try {
+                $xamppPath = "C:\xampp"
+                Start-Process "$xamppPath\apache_start.bat"
+                Start-Process "$xamppPath\mysql_start.bat"
+                "Processes launched successfully" | Out-File $log -Append
+            } catch {
+                "Error: $_" | Out-File $log -Append
+            }
+            "User-data script completed at $(Get-Date)" | Out-File $log -Append
+            </powershell>
+            <persist>true</persist>
       Tags:
         - Key: Name
           Value: DVWAServer     
