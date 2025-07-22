@@ -1,10 +1,10 @@
 # AWS Emulation Lab
 Development of an AWS Emulation Lab in form of an IaC CloudFormation template. That template is used to build up a lab in AWS, which will offer the testing of security mechanisms based on Adversary Emulation.
 
-- [AWS Emulation Lab Full](./AWS%20%20Emulation%20Lab%20Full)  
+- [AWS Emulation Lab Full](./AWS%20Emulation%20Lab%20Full)  
   Contains configurations and resources for building the lab environment without a Windows 10 instance, due to licence issues.
 
-- [AWS Emulation Lab Attacker Only](./AWS%20%20Emulation%20Lab%20Attacker)  
+- [AWS Emulation Lab Attacker Only](./AWS%20Emulation%20Lab%20Attacker)  
   Contains configurations and resources for building the lab environment, which encompasses Caldera C2 with a middleman attacker ubuntu host. This is used to transport instances to other environments and test extern systems security mechanisms.
   This environment will be set up in near future.
 
@@ -46,7 +46,7 @@ Development of an AWS Emulation Lab in form of an IaC CloudFormation template. T
   All logs are pushed to CloudWatch and are pulled by Splunk via Splunk Add-on for AWS from CloudWatch
   Systems are accessible via Systems Manager Fleet
 
-## Adhere to following information in order to setup the AWS Lab and prevent external access.
+## Adhere to following information in order to setup the AWS Lab and prevent external access
 
 ### CloudFormationInfrastructure:
 - Upload this file to CloudFormation in AWS and fill in all necessary information needed.
