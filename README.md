@@ -37,7 +37,7 @@ Development of an AWS Emulation Lab in form of an IaC CloudFormation template. T
 ## Active Agents on Instances
 - **EC2 CloudWatch Logs Agent** (bWAPP, DVWA, Juice Shop, Active Directory)
 - **System Manager Agent** (Attacker, bWAPP, DVWA, Juice Shop, Active Directory)  
-  All logs are pushed to CloudWatch and are pulled by Splunk via Splunk Add-on for AWS from CloudWatch  
+  All logs are pushed to CloudWatch and are pulled by Splunk via Splunk Add-on for AWS from CloudWatch.  
   Systems are accessible via Systems Manager Fleet
 
 ## Adhere to following information in order to setup the AWS Lab and prevent external access
