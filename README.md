@@ -1,22 +1,23 @@
 # AWS Emulation Lab
 Development of an AWS Emulation Lab in form of an IaC CloudFormation template. That template is used to build up a lab in AWS, which will offer the testing of security mechanisms based on Adversary Emulation.
 
-- [AWS Emulation Lab No Win10](./AWS%20Emulation%20Lab%20No%20Win10)  
-  Contains configurations and resources for building the lab environment without a Windows 10 instance, due to licence issues. 
-  Includes:
+- [AWS Emulation Lab Full](./AWS%20%20Emulation%20Lab%20Full)  
+  Contains configurations and resources for building the lab environment without a Windows 10 instance, due to licence issues.
 
-- [AWS Emulation Lab Win10](./AWS%20Emulation%20Lab%20Win10)  
-  Contains configurations and resources for building the lab environment with a Windows 10 instance.
+- [AWS Emulation Lab Attacker Only](./AWS%20%20Emulation%20Lab%20Attacker)  
+  Contains configurations and resources for building the lab environment, which encompasses Caldera C2 with a middleman attacker ubuntu host. This is used to transport instances to other environments and test extern systems security mechanisms.
+  This environment will be set up in near future.
 
+## Creation of following infrastructure
+- Caldera (Ubuntu EC2)
+- Attacker (Ubuntu EC2)
+- DVWA (Windows EC2)
+- Juice Shop (Ubuntu EC2)
+- bWAPP (Windows EC2)
+- Splunk (Ubuntu EC2)
+- Active Directory (Windows EC2)
 
-## Creation of following infrastructure:
-- EC2 Caldera Server
-- EC2 DVWA Server
-- EC2 Juice Shop Server
-- EC2 Active Directory
-- (EC2 Windows 10)
-
-## Used AWS Services after Lab Setup:
+## Used AWS Services after Lab Setup
 - CloudFormation
 - EC2
 - CloudWatch
@@ -27,10 +28,23 @@ Development of an AWS Emulation Lab in form of an IaC CloudFormation template. T
 - DynamoDB
 - S3 Bucket
 
-## Collected Log Sources:
+## Collected Log Sources
 - VPC Flow Logs
 - CloudTrail
-- EC2 CloudWatch Agent Logs (System , Security , PowerShell , Sysmon , Web)
+- EC2 CloudWatch Agent Logs 
+  - System
+  - Security
+  - PowerShell
+  - Sysmon
+  - Web
+  - Auditd
+  - Kernel
+
+## Active Agents on Instances
+- EC2 CloudWatch Logs Agent (bWAPP, DVWA, Juice Shop, Active Directory)
+- System Manager Agent (Attacker, bWAPP, DVWA, Juice Shop, Active Directory)
+  All logs are pushed to CloudWatch and are pulled by Splunk via Splunk Add-on for AWS from CloudWatch
+  Systems are accessible via Systems Manager Fleet
 
 ## Adhere to following information in order to setup the AWS Lab and prevent external access.
 
@@ -41,4 +55,4 @@ Development of an AWS Emulation Lab in form of an IaC CloudFormation template. T
 
 ### CalderaSecurityGroup:
 - Immediately after uploading CloudFormationInfrastructure file to CloudFormation, upload CalderSecurityGroup to CloudFormation.
-- The goal of this IaC template is to remove the EC2 instance (Caldera) from the internet. 
+- The goal of this IaC template is to remove the EC2 instance (Caldera) from the internet and make it only accessible to the user.
