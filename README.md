@@ -11,11 +11,11 @@ Development of an AWS Emulation Lab in form of an IaC CloudFormation template. T
 ## Creation of following infrastructure
 - Caldera (Ubuntu EC2)
 - Attacker (Ubuntu EC2)
-- DVWA (Windows EC2)
-- Juice Shop (Ubuntu EC2)
-- bWAPP (Windows EC2)
 - Splunk (Ubuntu EC2)
-- Active Directory (Windows EC2)
+- Active Directory (Windows EC2 - Domain Controller)
+- DVWA (Windows EC2 - Domain Joined)
+- Juice Shop (Ubuntu EC2 - Domain Joined)
+- bWAPP (Windows EC2 - Domain Joined)
 
 ## Used AWS Services
 - EC2
