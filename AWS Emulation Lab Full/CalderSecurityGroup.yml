@@ -17,6 +17,42 @@ Resources:
       ToPort: 8888
       CidrIp: !Join ["", [!ImportValue "DVWAInstancePublicIp", "/32"]]
 
+  AttackerIngressRule1:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !ImportValue CalderaSecurityGroupId
+      IpProtocol: tcp
+      FromPort: 8888
+      ToPort: 8888
+      SourceSecurityGroupId: !ImportValue AttackerSecurityGroupId
+
+  AttackerIngressRule2:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !ImportValue CalderaSecurityGroupId
+      IpProtocol: tcp
+      FromPort: 8888
+      ToPort: 8888
+      CidrIp: !Join ["", [!ImportValue "AttackerInstancePublicIp", "/32"]]
+
+  bWAPPIngressRule1:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !ImportValue CalderaSecurityGroupId
+      IpProtocol: tcp
+      FromPort: 8888
+      ToPort: 8888
+      SourceSecurityGroupId: !ImportValue "bwappSecurityGroupId"
+
+  bWAPPIngressRule2:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !ImportValue CalderaSecurityGroupId
+      IpProtocol: tcp
+      FromPort: 8888
+      ToPort: 8888
+      CidrIp: !Join ["", [!ImportValue "bWAPPInstancePublicIp", "/32"]]
+
   JuiceShopIngressRule1:
     Type: 'AWS::EC2::SecurityGroupIngress'
     Properties:

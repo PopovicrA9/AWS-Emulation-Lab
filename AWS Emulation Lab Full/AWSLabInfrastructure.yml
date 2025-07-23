@@ -24,7 +24,6 @@ Metadata:
           - BuggyWebApplicationIP
           - JuiceShopApplicationIP
           - CalderaIP
- #         - SplunkIP
           - AttackerIP
       - Label:
           default: "Launch GuardDuty"
@@ -112,11 +111,6 @@ Parameters:
     Type: String
     Default: "172.31.17.129"
     Description: Please provide a private IP address for the OWASP Juice Shop Webserver. This IP address should be in the same subnet as the DVWA and bWAPP Webserver.
-
-  # SplunkIP:
-  #   Type: String
-  #   Default: "172.31.18.129"
-  #   Description: Please provide a private IP address for the OWASP Juice Shop Webserver. This IP address should be in the same subnet as the DVWA and JuiceShop Webserver.
 
   CalderaIP:
     Type: String
@@ -922,6 +916,14 @@ Resources:
           FromPort: 139
           ToPort: 139
           SourceSecurityGroupId: !Ref AttackerSecurityGroup
+        - IpProtocol: tcp
+          FromPort: 445
+          ToPort: 445
+          SourceSecurityGroupId: !Ref CalderaSecurityGroup
+        - IpProtocol: tcp
+          FromPort: 139
+          ToPort: 139
+          SourceSecurityGroupId: !Ref CalderaSecurityGroup
       VpcId: !Ref VPCid
   #OWASP Juice Shop Security Group
   JuiceShopSecurityGroup:
@@ -937,6 +939,14 @@ Resources:
           FromPort: 3000
           ToPort: 3000
           CidrIp: !Ref MyAWSIP
+        - IpProtocol: tcp
+          FromPort: 445
+          ToPort: 445
+          SourceSecurityGroupId: !Ref CalderaSecurityGroup
+        - IpProtocol: tcp
+          FromPort: 139
+          ToPort: 139
+          SourceSecurityGroupId: !Ref CalderaSecurityGroup
       VpcId: !Ref VPCid
   #Buggy Web Application Security Group
   bWAPPSecurityGroup:
@@ -964,6 +974,22 @@ Resources:
           FromPort: 139
           ToPort: 139
           SourceSecurityGroupId: !Ref AttackerSecurityGroup
+        - IpProtocol: tcp
+          FromPort: 445
+          ToPort: 445
+          SourceSecurityGroupId: !Ref CalderaSecurityGroup
+        - IpProtocol: tcp
+          FromPort: 139
+          ToPort: 139
+          SourceSecurityGroupId: !Ref CalderaSecurityGroup
+        - IpProtocol: tcp
+          FromPort: 445
+          ToPort: 445
+          SourceSecurityGroupId: !Ref ADSecurityGroup
+        - IpProtocol: tcp
+          FromPort: 139
+          ToPort: 139
+          SourceSecurityGroupId: !Ref ADSecurityGroup
       VpcId: !Ref VPCid
   #Active Directory Security Group
   ADSecurityGroup:
@@ -1044,6 +1070,10 @@ Resources:
           FromPort: 53
           ToPort: 53
           SourceSecurityGroupId: !Ref AttackerSecurityGroup
+        - IpProtocol: tcp
+          FromPort: 53
+          ToPort: 53
+          SourceSecurityGroupId: !Ref CalderaSecurityGroup
         #3 rules for DNS UDP
         - IpProtocol: udp
           FromPort: 53
@@ -1152,26 +1182,21 @@ Resources:
           FromPort: 139
           ToPort: 139
           SourceSecurityGroupId: !Ref AttackerSecurityGroup
+        # Rules for Caldera to attach shares to the AD in an attack
+        - IpProtocol: tcp
+          FromPort: 445
+          ToPort: 445
+          SourceSecurityGroupId: !Ref CalderaSecurityGroup
+        - IpProtocol: tcp
+          FromPort: 139
+          ToPort: 139
+          SourceSecurityGroupId: !Ref CalderaSecurityGroup
       VpcId: !Ref VPCid
-  # #Splunk Instance
-  # SplunkInstance:
-  #   Type: 'AWS::EC2::Instance'
-  #   Properties:
-  #     ImageId:  ami-0805998f11a821197
-  #     InstanceType: t2.2xlarge
-  #     SubnetId: !Ref SubnetforWebservers
-  #     PrivateIpAddress: !Ref SplunkIP
-  #     SecurityGroupIds: 
-  #       - Ref: SplunkSecurityGroup
-  #     IamInstanceProfile: !Ref SplunkRoleForAWSInstanceProfile
-  #     Tags:
-  #       - Key: Name
-  #         Value: Splunk 
-  #Active Directory Instance
+
   ADInstance:
     Type: 'AWS::EC2::Instance'
     Properties:
-      ImageId: ami-04d371c8b742bc746
+      ImageId: ami-0d748e6fbd43f6019
       InstanceType: t2.medium
       SubnetId: !Ref SubnetforAD 
       PrivateIpAddress: !Ref ActiveDirectoryIP
@@ -1185,7 +1210,7 @@ Resources:
   DVWAInstance:
     Type: 'AWS::EC2::Instance'
     Properties:
-      ImageId: ami-0aa6310c28ec4b3e6
+      ImageId: ami-0ec76cb1f7765e2f7
       InstanceType: t2.medium
       SubnetId: !Ref SubnetforWebservers
       PrivateIpAddress: !Ref DamnVulnerableWebApplicationIP
@@ -1219,7 +1244,7 @@ Resources:
   bWAPPInstance:
     Type: 'AWS::EC2::Instance'
     Properties:
-      ImageId: ami-048ced173495d1b18
+      ImageId: ami-0026f242875795083
       InstanceType: t2.medium
       SubnetId: !Ref SubnetforWebservers
       PrivateIpAddress: !Ref BuggyWebApplicationIP
@@ -1268,7 +1293,7 @@ Resources:
   CalderaInstance:
     Type: 'AWS::EC2::Instance'
     Properties:
-      ImageId:  ami-0593979cab5173d2b
+      ImageId:  ami-0e5bb7bfbd9526536
       InstanceType: t2.large
       SubnetId: !Ref SubnetforPCs
       PrivateIpAddress: !Ref CalderaIP
@@ -1283,7 +1308,7 @@ Resources:
   AttackerInstance:
     Type: 'AWS::EC2::Instance'
     Properties:
-      ImageId:  ami-0cb98200e426d86b4
+      ImageId:  ami-0adabb8bf4627610f
       InstanceType: t2.large
       SubnetId: !Ref SubnetforPCs
       PrivateIpAddress: !Ref AttackerIP
