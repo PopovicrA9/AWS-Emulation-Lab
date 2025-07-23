@@ -308,6 +308,114 @@ Resources:
         - Key: Name
           Value: Splunk 
   
+  #Create Role for Lambda to be able to delete all logs after shut down of stack
+  apoCleanupLogsLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: CustomObjectCleanupLogsPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                - logs:DeleteLogGroup
+                - logs:DescribeLogGroups         
+                Resource: "*"
+              - Effect: Deny
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: "*"
+
+  #Function to create the custom object, which is used to delete all logs
+  apoCleanupLogs:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.lambda_handler
+      Role: !GetAtt apoCleanupLogsLambdaRole.Arn
+      FunctionName: apoCleanupLogs
+      Runtime: python3.9
+      Timeout: 60
+      Code:
+        ZipFile: |
+          import boto3
+          import logging
+          import cfnresponse
+          import os
+          import json
+
+          logs = boto3.client('logs')
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+
+          def send_response(event, context, response_status, response_data):
+              response_body = {
+                  "Status": response_status,
+                  "Reason": "See the details in CloudWatch Log Stream: " + context.log_stream_name,
+                  "PhysicalResourceId": context.log_stream_name,
+                  "StackId": event["StackId"],
+                  "RequestId": event["RequestId"],
+                  "LogicalResourceId": event["LogicalResourceId"],
+                  "Data": response_data,
+              }
+
+              cfnresponse.send(event, context, response_status, response_body)
+
+          def lambda_handler(event, context):
+              logger.info("event: {}".format(event))
+              try:
+                  if event['RequestType'] == 'Delete':
+                      # List of log groups to delete
+                      log_groups = [
+                          '/aws/lambda/DeleteCloudWatchLogGroups',
+                          '/aws/lambda/SecurityIsolation-Lambda',
+                          '/aws/lambda/apoCleanupBucket',
+                          '/aws/lambda/apoFileCreationLambda',
+                          'Linux-Audit',
+                          'Linux-Auth',
+                          'Linux-Kern',
+                          'Microsoft-Windows-PowerShell/Operational',
+                          'Microsoft-Windows-Sysmon/Operational',
+                          'Security',
+                          'System',
+                          'WebserverLogs',
+                          'apoVPCFlowLogs'
+                      ]
+                      
+                      for lg in log_groups:
+                          print(f"Trying to delete log group: {lg}")
+                          try:
+                              logs.delete_log_group(logGroupName=lg)
+                              print(f"Deleted log group: {lg}")
+                          except logs.exceptions.ResourceNotFoundException:
+                              print(f"Log group {lg} not found. Skipping.")
+                          except Exception as e:
+                              print(f"Failed to delete {lg}: {e}")
+                  response_data = {}
+                  response_data['Data'] = {}
+                  send_response(event, context, cfnresponse.SUCCESS, response_data)
+              except Exception as e:
+                  logger.error(f"An error occurred: {e}")
+                  send_response(event, context, cfnresponse.FAILED, {})
+                  raise
+
+
+  CleanupLogsOnDelete:
+    DependsOn: 
+      - apoCleanupLogs
+    Type: AWS::CloudFormation::CustomResource
+    Properties:
+      ServiceToken: !GetAtt apoCleanupLogs.Arn
+
   #Create Role for Lambda to be able to empty the Bucket prior to deletion of bucket
   apoCleanupBucketLambdaRole:
     Type: AWS::IAM::Role
@@ -345,7 +453,9 @@ Resources:
 
   #Function to create the custom object, which is used to delete contents of an S3 Bucket
   apoCleanupBucket:
-    DependsOn: aposimulationlabbucket
+    DependsOn: 
+      - CleanupLogsOnDelete
+      - aposimulationlabbucket
     Type: AWS::Lambda::Function
     Properties:
       Handler: index.lambda_handler
@@ -442,7 +552,9 @@ Resources:
 
   #Function to create the custom object, which is just a file with one IP Address as the entry.
   apoFileCreationLambda:
-    DependsOn: aposimulationlabbucket
+    DependsOn: 
+      - CleanupLogsOnDelete
+      - aposimulationlabbucket
     Type: AWS::Lambda::Function
     Properties:
       Handler: index.handler
@@ -515,6 +627,7 @@ Resources:
       - CalderaInstance
       - aposimulationlabbucket
       - aposimulationlabbucketPolicy
+      - CleanupLogsOnDelete
     Type: AWS::CloudFormation::CustomResource
     Properties:
       ServiceToken: !GetAtt apoFileCreationLambda.Arn
@@ -761,6 +874,7 @@ Resources:
                 Resource: "*"
   #VPC Flow Logs
   apoVPCFlowLogs:
+    DependsOn: CleanupLogsOnDelete
     Type: AWS::EC2::FlowLog
     Properties:
       ResourceId: !Ref VPCid
@@ -916,14 +1030,6 @@ Resources:
           FromPort: 139
           ToPort: 139
           SourceSecurityGroupId: !Ref AttackerSecurityGroup
-        - IpProtocol: tcp
-          FromPort: 445
-          ToPort: 445
-          SourceSecurityGroupId: !Ref CalderaSecurityGroup
-        - IpProtocol: tcp
-          FromPort: 139
-          ToPort: 139
-          SourceSecurityGroupId: !Ref CalderaSecurityGroup
       VpcId: !Ref VPCid
   #OWASP Juice Shop Security Group
   JuiceShopSecurityGroup:
@@ -939,14 +1045,6 @@ Resources:
           FromPort: 3000
           ToPort: 3000
           CidrIp: !Ref MyAWSIP
-        - IpProtocol: tcp
-          FromPort: 445
-          ToPort: 445
-          SourceSecurityGroupId: !Ref CalderaSecurityGroup
-        - IpProtocol: tcp
-          FromPort: 139
-          ToPort: 139
-          SourceSecurityGroupId: !Ref CalderaSecurityGroup
       VpcId: !Ref VPCid
   #Buggy Web Application Security Group
   bWAPPSecurityGroup:
@@ -974,22 +1072,6 @@ Resources:
           FromPort: 139
           ToPort: 139
           SourceSecurityGroupId: !Ref AttackerSecurityGroup
-        - IpProtocol: tcp
-          FromPort: 445
-          ToPort: 445
-          SourceSecurityGroupId: !Ref CalderaSecurityGroup
-        - IpProtocol: tcp
-          FromPort: 139
-          ToPort: 139
-          SourceSecurityGroupId: !Ref CalderaSecurityGroup
-        - IpProtocol: tcp
-          FromPort: 445
-          ToPort: 445
-          SourceSecurityGroupId: !Ref ADSecurityGroup
-        - IpProtocol: tcp
-          FromPort: 139
-          ToPort: 139
-          SourceSecurityGroupId: !Ref ADSecurityGroup
       VpcId: !Ref VPCid
   #Active Directory Security Group
   ADSecurityGroup:
@@ -1070,10 +1152,6 @@ Resources:
           FromPort: 53
           ToPort: 53
           SourceSecurityGroupId: !Ref AttackerSecurityGroup
-        - IpProtocol: tcp
-          FromPort: 53
-          ToPort: 53
-          SourceSecurityGroupId: !Ref CalderaSecurityGroup
         #3 rules for DNS UDP
         - IpProtocol: udp
           FromPort: 53
@@ -1182,18 +1260,10 @@ Resources:
           FromPort: 139
           ToPort: 139
           SourceSecurityGroupId: !Ref AttackerSecurityGroup
-        # Rules for Caldera to attach shares to the AD in an attack
-        - IpProtocol: tcp
-          FromPort: 445
-          ToPort: 445
-          SourceSecurityGroupId: !Ref CalderaSecurityGroup
-        - IpProtocol: tcp
-          FromPort: 139
-          ToPort: 139
-          SourceSecurityGroupId: !Ref CalderaSecurityGroup
       VpcId: !Ref VPCid
 
   ADInstance:
+    DependsOn: CleanupLogsOnDelete
     Type: 'AWS::EC2::Instance'
     Properties:
       ImageId: ami-0d748e6fbd43f6019
@@ -1208,6 +1278,7 @@ Resources:
           Value: ActiveDirectory
   #DVWA Instance
   DVWAInstance:
+    DependsOn: CleanupLogsOnDelete
     Type: 'AWS::EC2::Instance'
     Properties:
       ImageId: ami-0ec76cb1f7765e2f7
@@ -1242,6 +1313,7 @@ Resources:
   
   #bWAPP Instance
   bWAPPInstance:
+    DependsOn: CleanupLogsOnDelete
     Type: 'AWS::EC2::Instance'
     Properties:
       ImageId: ami-0026f242875795083
@@ -1276,6 +1348,7 @@ Resources:
 
   #OWASP Juice Shop Instance
   JuiceInstance:
+    DependsOn: CleanupLogsOnDelete
     Type: 'AWS::EC2::Instance'
     Properties:
       ImageId: ami-0c2761b689e1f0100
@@ -1445,6 +1518,7 @@ Resources:
 
   #Lambda Function for isolating EC2 devices
   apoIsolationLambdaFunction:
+    DependsOn: CleanupLogsOnDelete
     Type: "AWS::Lambda::Function"
     Properties:
       FunctionName:
@@ -1466,7 +1540,6 @@ Resources:
             - Arn
           JuiceShopSecurityGroup: !Ref JuiceShopSecurityGroup
           DVWASecurityGroup: !Ref DVWASecurityGroup
-          CalderaSecurityGroup: !Ref CalderaSecurityGroup
           ADSecurityGroup: !Ref ADSecurityGroup
           bWAPPSecurityGroup: !Ref bWAPPSecurityGroup
       Role:
@@ -1529,10 +1602,6 @@ Resources:
                   'dvwaserver': {
                       'iam_role_arn': os.environ['CloudWatchAgentForLogsRoleInstanceProfile'],
                       'security_group_id': os.environ['DVWASecurityGroup']
-                  },
-                  'caldera': {
-                      'iam_role_arn': os.environ['CloudWatchAgentForLogsRoleInstanceProfile'],
-                      'security_group_id': os.environ['CalderaSecurityGroup']
                   },
                   'activedirectory': {
                       'iam_role_arn': os.environ['CloudWatchAgentForLogsRoleInstanceProfile'],
@@ -1705,6 +1774,11 @@ Outputs:
     Value: !Ref CalderaSecurityGroup
     Export:
       Name: CalderaSecurityGroupId
+
+  CalderaPublicIp:
+    Value: !GetAtt CalderaInstance.PublicIp
+    Export:
+      Name: CalderaInstancePublicIp
   
   AttackerSecurityGroupId:
     Value: !Ref AttackerSecurityGroup

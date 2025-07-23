@@ -17,6 +17,42 @@ Resources:
       ToPort: 8888
       CidrIp: !Join ["", [!ImportValue "DVWAInstancePublicIp", "/32"]]
 
+  DVWAIngressRule3:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !ImportValue DVWASecurityGroupId
+      IpProtocol: tcp
+      FromPort: 445
+      ToPort: 445
+      SourceSecurityGroupId: !ImportValue CalderaSecurityGroupId
+
+  DVWAIngressRule4:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !ImportValue DVWASecurityGroupId
+      IpProtocol: tcp
+      FromPort: 445
+      ToPort: 445
+      CidrIp: !Join ["", [!ImportValue "CalderaInstancePublicIp", "/32"]]
+
+  DVWAIngressRule5:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !ImportValue DVWASecurityGroupId
+      IpProtocol: tcp
+      FromPort: 139
+      ToPort: 139
+      SourceSecurityGroupId: !ImportValue CalderaSecurityGroupId
+
+  DVWAIngressRule6:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !ImportValue DVWASecurityGroupId
+      IpProtocol: tcp
+      FromPort: 139
+      ToPort: 139
+      CidrIp: !Join ["", [!ImportValue "CalderaInstancePublicIp", "/32"]]
+
   AttackerIngressRule1:
     Type: 'AWS::EC2::SecurityGroupIngress'
     Properties:
@@ -52,6 +88,78 @@ Resources:
       FromPort: 8888
       ToPort: 8888
       CidrIp: !Join ["", [!ImportValue "bWAPPInstancePublicIp", "/32"]]
+
+  bWAPPIngressRule3:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !ImportValue bwappSecurityGroupId
+      IpProtocol: tcp
+      FromPort: 445
+      ToPort: 445
+      SourceSecurityGroupId: !ImportValue CalderaSecurityGroupId
+
+  bWAPPIngressRule4:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !ImportValue bwappSecurityGroupId
+      IpProtocol: tcp
+      FromPort: 445
+      ToPort: 445
+      CidrIp: !Join ["", [!ImportValue "CalderaInstancePublicIp", "/32"]]
+
+  bWAPPIngressRule5:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !ImportValue bwappSecurityGroupId
+      IpProtocol: tcp
+      FromPort: 139
+      ToPort: 139
+      SourceSecurityGroupId: !ImportValue CalderaSecurityGroupId
+
+  bWAPPIngressRule6:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !ImportValue bwappSecurityGroupId
+      IpProtocol: tcp
+      FromPort: 139
+      ToPort: 139
+      CidrIp: !Join ["", [!ImportValue "CalderaInstancePublicIp", "/32"]]
+
+  bWAPPIngressRule8:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !ImportValue bwappSecurityGroupId
+      IpProtocol: tcp
+      FromPort: 445
+      ToPort: 445
+      SourceSecurityGroupId: !ImportValue ADSecurityGroupId
+
+  bWAPPIngressRule9:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !ImportValue bwappSecurityGroupId
+      IpProtocol: tcp
+      FromPort: 445
+      ToPort: 445
+      CidrIp: !Join ["", [!ImportValue "ADPublicIp", "/32"]]
+
+  bWAPPIngressRule10:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !ImportValue bwappSecurityGroupId
+      IpProtocol: tcp
+      FromPort: 139
+      ToPort: 139
+      SourceSecurityGroupId: !ImportValue ADSecurityGroupId
+
+  bWAPPIngressRule7:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !ImportValue bwappSecurityGroupId
+      IpProtocol: tcp
+      FromPort: 139
+      ToPort: 139
+      CidrIp: !Join ["", [!ImportValue "ADPublicIp", "/32"]]
 
   JuiceShopIngressRule1:
     Type: 'AWS::EC2::SecurityGroupIngress'
@@ -106,3 +214,58 @@ Resources:
       FromPort: 53
       ToPort: 53
       CidrIp: !Join ["", [!ImportValue "ADPublicIp", "/32"]]
+
+  ADIngressRule5:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !ImportValue ADSecurityGroupId
+      IpProtocol: tcp
+      FromPort: 445
+      ToPort: 445
+      SourceSecurityGroupId: !ImportValue CalderaSecurityGroupId
+
+  ADIngressRule6:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !ImportValue ADSecurityGroupId
+      IpProtocol: tcp
+      FromPort: 445
+      ToPort: 445
+      CidrIp: !Join ["", [!ImportValue "CalderaInstancePublicIp", "/32"]]
+
+  ADIngressRule7:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !ImportValue ADSecurityGroupId
+      IpProtocol: tcp
+      FromPort: 139
+      ToPort: 139
+      SourceSecurityGroupId: !ImportValue CalderaSecurityGroupId
+
+  ADIngressRule8:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !ImportValue ADSecurityGroupId
+      IpProtocol: tcp
+      FromPort: 139
+      ToPort: 139
+      CidrIp: !Join ["", [!ImportValue "CalderaInstancePublicIp", "/32"]]
+
+  ADIngressRule9:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !ImportValue ADSecurityGroupId
+      IpProtocol: tcp
+      FromPort: 53
+      ToPort: 53
+      SourceSecurityGroupId: !ImportValue CalderaSecurityGroupId
+
+  ADIngressRule10:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !ImportValue ADSecurityGroupId
+      IpProtocol: tcp
+      FromPort: 53
+      ToPort: 53
+      CidrIp: !Join ["", [!ImportValue "CalderaInstancePublicIp", "/32"]]
+
