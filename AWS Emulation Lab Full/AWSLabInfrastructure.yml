@@ -1366,7 +1366,7 @@ Resources:
   CalderaInstance:
     Type: 'AWS::EC2::Instance'
     Properties:
-      ImageId:  ami-0e5bb7bfbd9526536
+      ImageId:  ami-02983d9c6d692dde5
       InstanceType: t2.large
       SubnetId: !Ref SubnetforPCs
       PrivateIpAddress: !Ref CalderaIP
