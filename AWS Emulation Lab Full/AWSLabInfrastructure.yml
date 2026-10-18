@@ -440,8 +440,8 @@ Resources:
                 - s3:ListBucketVersions           
                 - s3:DeleteObjectVersion          
                 Resource: 
-                  - arn:aws:s3:::aposimulationlabbucket/*
-                  - arn:aws:s3:::aposimulationlabbucket
+                  - arn:aws:s3:::apopsimulationlabbucket/*
+                  - arn:aws:s3:::apopsimulationlabbucket
               - Effect: Allow
                 Action:
                   - logs:CreateLogGroup
@@ -455,7 +455,7 @@ Resources:
   apoCleanupBucket:
     DependsOn: 
       - CleanupLogsOnDelete
-      - aposimulationlabbucket
+      - apopsimulationlabbucket
     Type: AWS::Lambda::Function
     Properties:
       Handler: index.lambda_handler
@@ -514,12 +514,12 @@ Resources:
 
   CleanupBucketOnDelete:
     DependsOn: 
-      - aposimulationlabbucket
+      - apopsimulationlabbucket
       - apoCleanupBucket
     Type: AWS::CloudFormation::CustomResource
     Properties:
       ServiceToken: !GetAtt apoCleanupBucket.Arn
-      BucketName: !Ref aposimulationlabbucket
+      BucketName: !Ref apopsimulationlabbucket
 
   #Define Lambda Role for Lambda creating Threat Intelligence File for GuardDuty.
   apoFileCreationLambdaRole:
@@ -542,7 +542,7 @@ Resources:
                   - s3:GetObject
                   - s3:PutObject
                 Resource: 
-                  - arn:aws:s3:::aposimulationlabbucket/*
+                  - arn:aws:s3:::apopsimulationlabbucket/*
               - Effect: Allow
                 Action:
                   - logs:CreateLogGroup
@@ -554,7 +554,7 @@ Resources:
   apoFileCreationLambda:
     DependsOn: 
       - CleanupLogsOnDelete
-      - aposimulationlabbucket
+      - apopsimulationlabbucket
     Type: AWS::Lambda::Function
     Properties:
       Handler: index.handler
@@ -625,15 +625,15 @@ Resources:
     DependsOn: 
       - apoFileCreationLambda
       - CalderaInstance
-      - aposimulationlabbucket
-      - aposimulationlabbucketPolicy
+      - apopsimulationlabbucket
+      - apopsimulationlabbucketPolicy
       - CleanupLogsOnDelete
     Type: AWS::CloudFormation::CustomResource
     Properties:
       ServiceToken: !GetAtt apoFileCreationLambda.Arn
       IPAddress:  
         Fn::GetAtt: CalderaInstance.PublicIp
-      OutputBucket: !Ref aposimulationlabbucket
+      OutputBucket: !Ref apopsimulationlabbucket
 
   #DynamoDB Detection Table
   DetectionTable:
@@ -735,16 +735,16 @@ Resources:
             description: "Define a path to Registry Keys you want to collect"
             displayType: textarea
   #S3 Bucket for CloudTrail Log Storage
-  aposimulationlabbucket:
+  apopsimulationlabbucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: aposimulationlabbucket
+      BucketName: apopsimulationlabbucket
   #S3 Bucket Policy for S3 Bucket
-  aposimulationlabbucketPolicy:
-    DependsOn: aposimulationlabbucket
+  apopsimulationlabbucketPolicy:
+    DependsOn: apopsimulationlabbucket
     Type: AWS::S3::BucketPolicy
     Properties:
-      Bucket: !Ref aposimulationlabbucket
+      Bucket: !Ref apopsimulationlabbucket
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -753,13 +753,13 @@ Resources:
             Principal:
               Service: cloudtrail.amazonaws.com
             Action: s3:GetBucketAcl
-            Resource: !Sub arn:aws:s3:::${aposimulationlabbucket}
+            Resource: !Sub arn:aws:s3:::${apopsimulationlabbucket}
           - Sid: AWSCloudTrailWrite
             Effect: Allow
             Principal:
               Service: cloudtrail.amazonaws.com
             Action: s3:PutObject
-            Resource: !Sub arn:aws:s3:::${aposimulationlabbucket}/AWSLogs/${AWS::AccountId}/*
+            Resource: !Sub arn:aws:s3:::${apopsimulationlabbucket}/AWSLogs/${AWS::AccountId}/*
             Condition:
               StringEquals:
                 s3:x-amz-acl: bucket-owner-full-control
@@ -767,7 +767,7 @@ Resources:
   #Threat Intelligence File linked to GuardDuty
   LockBitThreatIntel:
     DependsOn: 
-      - aposimulationlabbucket
+      - apopsimulationlabbucket
       - GuardDutyDetector
       - LockBitIPAddress
     Type: AWS::GuardDuty::ThreatIntelSet
@@ -776,7 +776,7 @@ Resources:
       DetectorId: !Ref GuardDutyDetector
       Format: TXT
       Location:
-        Fn::Sub: https://s3.amazonaws.com/${aposimulationlabbucket}/LockBitIP.txt
+        Fn::Sub: https://s3.amazonaws.com/${apopsimulationlabbucket}/LockBitIP.txt
       Name: LockBitThreatIntel
   #CloudTrail Log Group
   apoCloudTrailLogsGroup:
@@ -821,8 +821,8 @@ Resources:
   CloudTrailSimulationLab:
     Type: AWS::CloudTrail::Trail
     DependsOn: 
-      - aposimulationlabbucket
-      - aposimulationlabbucketPolicy
+      - apopsimulationlabbucket
+      - apopsimulationlabbucketPolicy
       - apoCloudTrailLogsRoleInstanceProfile
       - apoCloudTrailLogsRole
       - CleanupBucketOnDelete
@@ -830,7 +830,7 @@ Resources:
       TrailName: CloudTrailSimulationLab 
       CloudWatchLogsLogGroupArn: !GetAtt apoCloudTrailLogsGroup.Arn
       CloudWatchLogsRoleArn: !GetAtt apoCloudTrailLogsRole.Arn
-      S3BucketName: !Ref aposimulationlabbucket
+      S3BucketName: !Ref apopsimulationlabbucket
       IsLogging: true
       IsMultiRegionTrail: true
       EventSelectors:
@@ -1366,7 +1366,7 @@ Resources:
   CalderaInstance:
     Type: 'AWS::EC2::Instance'
     Properties:
-      ImageId:  ami-0e5bb7bfbd9526536
+      ImageId:  ami-0abc407a265ba6736
       InstanceType: t2.large
       SubnetId: !Ref SubnetforPCs
       PrivateIpAddress: !Ref CalderaIP
