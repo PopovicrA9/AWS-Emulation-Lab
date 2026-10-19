@@ -12,10 +12,6 @@ Metadata:
           - SubnetforWebservers
           - SubnetforPCs
       - Label:
-          default: "Splunk Amount of Instances"
-        Parameters:
-          - InstanceCount
-      - Label:
           default: "IP Address Assignments"
         Parameters:
           - MyAWSIP
@@ -25,6 +21,7 @@ Metadata:
           - JuiceShopApplicationIP
           - CalderaIP
           - AttackerIP
+          - WazuhIP
       - Label:
           default: "Launch GuardDuty"
         Parameters:
@@ -35,52 +32,8 @@ Metadata:
           - ResourcePrefix
           - TagKey
           - TagValue
-
-# Parameters and Condition for Splunk Amount of Resource Creations
-Conditions:
-  Launch1: !Equals [1, 1]
-  Launch2: !Not [!Equals [1, !Ref InstanceCount]]
-  Launch3: !And
-  - !Not [!Equals [1, !Ref InstanceCount]]
-  - !Not [!Equals [2, !Ref InstanceCount]]
-  Launch4: !And
-  - !Not [!Equals [1, !Ref InstanceCount]]
-  - !Not [!Equals [2, !Ref InstanceCount]]
-  - !Not [!Equals [3, !Ref InstanceCount]]
-  Launch5: !And
-  - !Not [!Equals [1, !Ref InstanceCount]]
-  - !Not [!Equals [2, !Ref InstanceCount]]
-  - !Not [!Equals [3, !Ref InstanceCount]]
-  - !Not [!Equals [4, !Ref InstanceCount]]
-  Launch6: !Or
-  - !Equals [6, !Ref InstanceCount]
-  - !Equals [7, !Ref InstanceCount]
-  - !Equals [8, !Ref InstanceCount]
-  - !Equals [9, !Ref InstanceCount]
-  - !Equals [10, !Ref InstanceCount]
-  Launch7: !Or
-  - !Equals [7, !Ref InstanceCount]
-  - !Equals [8, !Ref InstanceCount]
-  - !Equals [9, !Ref InstanceCount]
-  - !Equals [10, !Ref InstanceCount]
-  Launch8: !Or
-  - !Equals [8, !Ref InstanceCount]
-  - !Equals [9, !Ref InstanceCount]
-  - !Equals [10, !Ref InstanceCount]
-  Launch9: !Or
-  - !Equals [9, !Ref InstanceCount]
-  - !Equals [10, !Ref InstanceCount]
-  Launch10: !Equals [10, !Ref InstanceCount]
  
 Parameters:
-
-  InstanceCount:
-    Description: Number of EC2 instances (must be between 1 and 10)
-    Type: Number
-    Default: 1
-    MinValue: 1
-    MaxValue: 10
-    ConstraintDescription: Must be a number between 1 and 10
 
   # General Resource Creation Parameters
   MyAWSIP:
@@ -122,13 +75,18 @@ Parameters:
     Default: "172.31.35.129"
     Description: Please provide a private IP address for the C2 middleman server.
 
+  WazuhIP:
+    Type: String
+    Default: "172.31.23.191"
+    Description: Please provide a private IP address for the SIEM Wazuh.
+
   SubnetforAD:
     Type: AWS::EC2::Subnet::Id
     Description: Subnet for Active Directory.
 
   SubnetforWebservers:
     Type: AWS::EC2::Subnet::Id
-    Description: Subnet for the DVWA Webserver, OWASP Juice Shop Webserver and SIEM Splunk Webserver.
+    Description: Subnet for the DVWA Webserver, OWASP Juice Shop Webserver and SIEM Wazuh Webserver.
 
   SubnetforPCs:
     Type: AWS::EC2::Subnet::Id
@@ -166,147 +124,20 @@ Parameters:
 Mappings: {}
 
 Resources:
-  #Define 10 Splunk Instaces to iterate over and create depending on how many the user wants to create from start
-  SplunkInstance1:
-    Condition: Launch1
+  #Define Wazuh SIEM Instaces
+  WazuhInstance:
     Type: 'AWS::EC2::Instance'
     Properties:
-      ImageId:  ami-0805998f11a821197
-      InstanceType: t2.2xlarge
+      ImageId:  ami-0a941210175f925e2
+      InstanceType: t2.medium
       SubnetId: !Ref SubnetforWebservers
+      PrivateIpAddress: !Ref WazuhIP
       SecurityGroupIds: 
-        - Ref: SplunkSecurityGroup
-      IamInstanceProfile: !Ref SplunkRoleForAWSInstanceProfile
+        - Ref: WazuhSecurityGroup
+      IamInstanceProfile: !Ref WazuhRoleForAWSInstanceProfile
       Tags:
         - Key: Name
-          Value: Splunk 
-
-  SplunkInstance2:
-    Condition: Launch2
-    Type: 'AWS::EC2::Instance'
-    Properties:
-      ImageId:  ami-0805998f11a821197
-      InstanceType: t2.2xlarge
-      SubnetId: !Ref SubnetforWebservers
-      SecurityGroupIds: 
-        - Ref: SplunkSecurityGroup
-      IamInstanceProfile: !Ref SplunkRoleForAWSInstanceProfile
-      Tags:
-        - Key: Name
-          Value: Splunk 
-
-  SplunkInstance3:
-    Condition: Launch3
-    Type: 'AWS::EC2::Instance'
-    Properties:
-      ImageId:  ami-0805998f11a821197
-      InstanceType: t2.2xlarge
-      SubnetId: !Ref SubnetforWebservers
-      SecurityGroupIds: 
-        - Ref: SplunkSecurityGroup
-      IamInstanceProfile: !Ref SplunkRoleForAWSInstanceProfile
-      Tags:
-        - Key: Name
-          Value: Splunk 
-
-  SplunkInstance4:
-    Condition: Launch4
-    Type: 'AWS::EC2::Instance'
-    Properties:
-      ImageId:  ami-0805998f11a821197
-      InstanceType: t2.2xlarge
-      SubnetId: !Ref SubnetforWebservers
-      SecurityGroupIds: 
-        - Ref: SplunkSecurityGroup
-      IamInstanceProfile: !Ref SplunkRoleForAWSInstanceProfile
-      Tags:
-        - Key: Name
-          Value: Splunk 
-
-
-  SplunkInstance5:
-    Condition: Launch5
-    Type: 'AWS::EC2::Instance'
-    Properties:
-      ImageId:  ami-0805998f11a821197
-      InstanceType: t2.2xlarge
-      SubnetId: !Ref SubnetforWebservers
-      SecurityGroupIds: 
-        - Ref: SplunkSecurityGroup
-      IamInstanceProfile: !Ref SplunkRoleForAWSInstanceProfile
-      Tags:
-        - Key: Name
-          Value: Splunk 
-
-  SplunkInstance6:
-    Condition: Launch6
-    Type: 'AWS::EC2::Instance'
-    Properties:
-      ImageId:  ami-0805998f11a821197
-      InstanceType: t2.2xlarge
-      SubnetId: !Ref SubnetforWebservers
-      SecurityGroupIds: 
-        - Ref: SplunkSecurityGroup
-      IamInstanceProfile: !Ref SplunkRoleForAWSInstanceProfile
-      Tags:
-        - Key: Name
-          Value: Splunk 
-
-  SplunkInstance7:
-    Condition: Launch7
-    Type: 'AWS::EC2::Instance'
-    Properties:
-      ImageId:  ami-0805998f11a821197
-      InstanceType: t2.2xlarge
-      SubnetId: !Ref SubnetforWebservers
-      SecurityGroupIds: 
-        - Ref: SplunkSecurityGroup
-      IamInstanceProfile: !Ref SplunkRoleForAWSInstanceProfile
-      Tags:
-        - Key: Name
-          Value: Splunk 
-
-  SplunkInstance8:
-    Condition: Launch8
-    Type: 'AWS::EC2::Instance'
-    Properties:
-      ImageId:  ami-0805998f11a821197
-      InstanceType: t2.2xlarge
-      SubnetId: !Ref SubnetforWebservers
-      SecurityGroupIds: 
-        - Ref: SplunkSecurityGroup
-      IamInstanceProfile: !Ref SplunkRoleForAWSInstanceProfile
-      Tags:
-        - Key: Name
-          Value: Splunk 
-
-  SplunkInstance9:
-    Condition: Launch9
-    Type: 'AWS::EC2::Instance'
-    Properties:
-      ImageId:  ami-0805998f11a821197
-      InstanceType: t2.2xlarge
-      SubnetId: !Ref SubnetforWebservers
-      SecurityGroupIds: 
-        - Ref: SplunkSecurityGroup
-      IamInstanceProfile: !Ref SplunkRoleForAWSInstanceProfile
-      Tags:
-        - Key: Name
-          Value: Splunk 
-
-  SplunkInstance10:
-    Condition: Launch10
-    Type: 'AWS::EC2::Instance'
-    Properties:
-      ImageId:  ami-0805998f11a821197
-      InstanceType: t2.2xlarge
-      SubnetId: !Ref SubnetforWebservers
-      SecurityGroupIds: 
-        - Ref: SplunkSecurityGroup
-      IamInstanceProfile: !Ref SplunkRoleForAWSInstanceProfile
-      Tags:
-        - Key: Name
-          Value: Splunk 
+          Value: Wazuh 
   
   #Create Role for Lambda to be able to delete all logs after shut down of stack
   apoCleanupLogsLambdaRole:
@@ -840,18 +671,18 @@ Resources:
       InsightSelectors:
       - InsightType: ApiCallRateInsight
       - InsightType: ApiErrorRateInsight
-  #Make possible for IAM Role to assign to SIEM Splunk EC2
-  SplunkRoleForAWSInstanceProfile:
+  #Make possible for IAM Role to assign to SIEM Wazuh EC2
+  WazuhRoleForAWSInstanceProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:
       Path: "/"
       Roles:
-        - Ref: SplunkRoleForAWS
-  #IAM Role for SIEM Splunk Data Onboarding from CloudWatch Logs
-  SplunkRoleForAWS:
+        - Ref: WazuhRoleForAWS
+  #IAM Role for SIEM Wazuh Data Onboarding from CloudWatch Logs
+  WazuhRoleForAWS:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: SplunkRoleForAWS
+      RoleName: WazuhRoleForAWS
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -959,19 +790,19 @@ Resources:
     Properties:
       DhcpOptionsId: !Ref DHCPOptions
       VpcId: !Ref VPCid
-  #SIEM Splunk Security Group
-  SplunkSecurityGroup:
+  #SIEM Wazuh Security Group
+  WazuhSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
-      GroupDescription: Enable Splunk to be accessed by user
+      GroupDescription: Enable Wazuh to be accessed by user
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 22
           ToPort: 22
           CidrIp: !Ref MyAWSIP
         - IpProtocol: tcp
-          FromPort: 8000
-          ToPort: 8000
+          FromPort: 443
+          ToPort: 443
           CidrIp: !Ref MyAWSIP
       VpcId: !Ref VPCid
   #Caldera and Kali Security Group
@@ -1143,7 +974,7 @@ Resources:
         - IpProtocol: tcp
           FromPort: 53
           ToPort: 53
-          SourceSecurityGroupId: !Ref SplunkSecurityGroup
+          SourceSecurityGroupId: !Ref WazuhSecurityGroup
         - IpProtocol: tcp
           FromPort: 53
           ToPort: 53
